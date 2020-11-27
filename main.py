@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 
 #変更してみた
-
+#ぶんぶんハローPYTHOｎ
 # import file
 import mlp
 import submlp
