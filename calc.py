@@ -137,12 +137,12 @@ def norm(model, args):
 		for param in model.params():
 			if param.name != 'b' or len(param.shape):  # バイアス以外だったら
 				# l1_norm
-				param.update_rule.add_hook(WeightDecay(args.l_lr))  # 重み減衰を適用
+				param.update_rule.add_hook(Lasso(args.l_lr)) # 重み減衰を適用
 	elif args.norm == "l2":
 		for param in model.params():
 			if param.name != 'b' or len(param.shape):  # バイアス以外だったら
 				# l2_norm
-				param.update_rule.add_hook(Lasso(args.l_lr))  # 重み減衰を適用
+				param.update_rule.add_hook(WeightDecay(args.l_lr)) # 重み減衰を適用
 	else:
 		pass
 
@@ -155,9 +155,9 @@ def craft_titanic(model, args, data, no):
 	elif args.lossf == 'mse_sig':
 		y_pred = np.where(F.sigmoid(model(data)).array > 0.5 ,1, 0)
 	if args.model == 'ie':
-		np.savetxt('./result/test/modeltest_{}_{}_{}_add{}_mdlno{}.csv'.format(args.day,args.model,args.data_model, args.add, no),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
+		np.savetxt('./result/test/Mt_{}_{}_{}_{}_{}_add{}_mdlno{}.csv'.format(args.day, args.norm,args.model,args.data_model, args.opt, args.add, no),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
 	else:
-		np.savetxt('./result/test/modeltest_{}_{}_{}_units{}_sum.csv'.format(args.day,args.model,args.data_model, args.mlp_units),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
+		np.savetxt('./result/test/Mt_{}_{}_{}_{}_{}_units{}_sum.csv'.format(args.day, args.norm,args.model,args.data_model, args.opt, args.mlp_units),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
 
 def craft_titanic_sum(model_list, args, data):
 	test_ID = []
@@ -174,9 +174,9 @@ def craft_titanic_sum(model_list, args, data):
 	y_pred = y_pred/len(model_list)
 	y_pred = np.where(y_pred > 0.5, 1, 0)
 	if args.model == 'ie':
-		np.savetxt('./result/test/modeltest_{}_{}_{}_add{}_sum.csv'.format(args.day,args.model,args.data_model,args.add),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
+		np.savetxt('./result/test/Mt_{}_{}_{}_{}_{}_add{}_sum.csv'.format(args.day, args.norm,args.model,args.data_model, args.opt,args.add),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
 	else:
-		np.savetxt('./result/test/modeltest_{}_{}_{}_units{}_sum.csv'.format(args.day,args.model,args.data_model, args.mlp_units),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
+		np.savetxt('./result/test/Mt_{}_{}_{}_{}_{}_units{}_sum.csv'.format(args.day, args.norm,args.model,args.data_model, args.opt, args.mlp_units),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
 
 def under_sampling(y_data,x_data):
     # npの一次元データをもらって返す。Xは二次元
