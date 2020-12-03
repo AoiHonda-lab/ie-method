@@ -10,6 +10,7 @@ import calc
 import running
 
 # library
+import datetime
 import Hyperreal
 import os
 import argparse
@@ -39,6 +40,7 @@ def main():
 
 	# read config
 	parser = argparse.ArgumentParser()
+	dt_now = datetime.datetime.now()
 	# モデルをリストに入れる
 	model_list = []
 	shape_list = []
@@ -51,7 +53,7 @@ def main():
 	parser.add_argument('--add', type=int, default='2', help='add: 1 or 2 or 3 or 9(all)')
 	parser.add_argument('--data_model', type=str, default='Titanic_train_3pop', help='_3_3_pool_1_mnist_2class：CSVの入力ファイル指名')
 	parser.add_argument('--lossf', type=str, default='mse_sig', help='dataset: entoropy or mean_squrd：損失誤差関数')
-	parser.add_argument('--day', type=str, default='test_day', help='data_file_name：日付指定')
+	parser.add_argument('--day', type=str, default=str(dt_now.month)+str(dt_now.day)+str(dt_now.hour)+str(dt_now.minute), help='data_file_name：日付指定')
 	parser.add_argument('--Titanic',type=str, default='on', help='on or off：タイタニックデータ用')
 	parser.add_argument('--acc_info',type=str, default='on', help='on or off：正答率や再現性とかの情報出力するか否か')
 	parser.add_argument('--tnorm', type=str, default='daisu', help='daisu or ronri or dombi or duboa')#tnormの型決め
@@ -84,7 +86,7 @@ def main():
 	parser.add_argument('--out', type=int, default=1, help='units_out in each layer')
 	parser.add_argument('--batch_size', type=int, default=75)
 	parser.add_argument('--func', type=str, default='relu_1', help='dataset: sigmoid or relu_1')
-	parser.add_argument('--model', type=str, default='mlp', help='dataset: mlp or cnn')
+	parser.add_argument('--model', type=str, default='ie', help='dataset: mlp or cnn')
 	parser.add_argument('--opt', type=str, default='adam', help='dataset: sgd or adam')
 	parser.add_argument('--shoki_opt', type=str, default='max_min', help='')
 	parser.add_argument('--train_number', type=int, default=2, help='learning rate')
