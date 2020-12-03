@@ -37,6 +37,9 @@ class IE(chainer.Chain):
         self.add = calc.add(self.args.add, len(self.ie_data[0]))   
         # 各点集合の長さ[9, 45, 129, ,,, 510, 511]
         self.set_sum = calc.set_sum(self.hh)
+
+        self.t_box = np.zeros((self.add,len(self.ie_data[0])))
+
         print("===== hidden units =====", flush=True)
         print("{}".format(self.set_sum[-1]))
 
@@ -98,28 +101,50 @@ class IE(chainer.Chain):
                 #         exec("self.fa"+ str(num + 1) + " = L.Linear(1, 1000, initialW=submodel.fc1.W.array[:, "+ str(num) +", np.newaxis], initial_bias=submodel.fc1.b.array)")  
                 #         exec("self.fb"+ str(num + 1) + " = L.Linear(1000, 1, initialW=submodel.fc3.W.array[:, "+ str(num) +", np.newaxis], initial_bias=submodel.fc3.b.array)") 
                 # else:
+
                 #初期値の入力を行っていく
                 with self.init_scope():
+                    self.l = []
                     for num in range(len(ie_data[0])):
                         if self.args.gpu_id >= 0:
-                            exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=cp.asnumpy(a[" + str(num) + "]), initial_bias=cp.asnumpy(b[" + str(num) + "]))")
-                            exec("self.l"+str(num + 1)+".to_gpu(self.args.gpu_id)")
+                            self.l.append(L.Linear(1, 1, initialW=cp.asnumpy(a[num]), initial_bias=cp.asnumpy(b[num])))
+                            self.l[num].to_gpu(self.args.gpu_id)
                         else:
-                            exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=a[" + str(num) + "], initial_bias=b[" + str(num) + "])")
+                            self.l.append(L.Linear(1, 1, initialW=a[num], initial_bias=b[num]))
+
+                #初期値の入力を行っていく
+                # with self.init_scope():
+                #     for num in range(len(ie_data[0])):
+                #         if self.args.gpu_id >= 0:
+                #             exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=cp.asnumpy(a[" + str(num) + "]), initial_bias=cp.asnumpy(b[" + str(num) + "]))")
+                #             exec("self.l"+str(num + 1)+".to_gpu(self.args.gpu_id)")
+                #         else:
+                #             exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=a[" + str(num) + "], initial_bias=b[" + str(num) + "])")
+
+                #べき集合の行列を作成
+                for i, j in zip(self.hh, range(self.add+1)):
+                    if i == []:
+                        pass
+                    else:
+                        for l in i:
+                            self.t_box[j-1,l-1] = 1
+
 
         elif(self.args.pre_shoki == 'random'):#初期値をランダムにする時
             with self.init_scope():
                 for num in range(len(ie_data[0])):
-                    exec("self.l" + str(num + 1) + "= L.Linear(1, 1)")
+                    self.l[num] = L.Linear(1, 1)
                 self.lt = L.Linear(self.add, args.out)
                 # self.la = L.Linear(1, 1, nobias=True) #バイアスなし、パラメータのためのもの
 
         elif(self.args.pre_shoki == 'units'):
             with self.init_scope():
                 #前半の層のユニットを増やしたもの
+                self.fa = []
+                self.fb = []
                 for num in range(len(ie_data[0])):
-                    exec("self.fa"+ str(num + 1) + " = L.Linear(1, 1000)")  
-                    exec("self.fb"+ str(num + 1) + " = L.Linear(1000, 1)") 
+                    self.fa[num] = L.Linear(1, 1000)  
+                    self.fb[num] = L.Linear(1000, 1) 
         else:
             print('error:前準備部分でpre_shokiの設定ミス')
         with self.init_scope():
@@ -139,64 +164,65 @@ class IE(chainer.Chain):
                     self.lt.to_gpu(self.args.gpu_id)
 
     def __call__(self, x, tnorm = "daisu"):#関数が呼び出されるたびに実行される処理xのとなりにsubmodel
+        X = []
+
         for num in range(len(self.ie_data[0])):#xにバッチサイズごとのデータを入れていく
-            exec("x" + str(num + 1) + "= x[:, " + str(num) + "]") 
+            X.append(x[:, num]) 
 
-        # for num in range(len(self.ie_data[0])):#xにバッチサイズごとのデータを入れていく
-        #     exec('x' + str(num + 1) + '= np.ravel(submodel(np.insert(np.zeros([x.shape[0],x.shape[1]-1], dtype = "float32"), [' + str(num) + '], x[:,' + str(num) + '].reshape(-1, 1), axis = 1)).array)') 
-
-        # 活性化関数の指定とパイプを通す
-        #相関係数から決める場合
-        if self.args.pre_shoki == "units":
+        # 前準備層
+        H = []
+        if self.args.pre_shoki == "units":#多数のユニットで学習する場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
-                exec("h" + str(num + 1) + "= F.sigmoid(self.fb" + str(num + 1) + "(self.fa" + str(num + 1) + "(x" + str(num + 1) + ".reshape(1, len(x)).T)))")
-        else:
+                H.append(F.sigmoid(self.fb[num](self.fa[num](X[num].reshape(1, len(x)).T))))
+        else:#相関係数から決める場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
-                exec("h" + str(num + 1) + "= F.sigmoid(self.l" + str(num + 1) + "(x" + str(num + 1) + ".reshape(1, len(x)).T))")
+                H.append(F.sigmoid(self.l[num](X[num].reshape(1, len(x)).T)))
 
         box = [] #各包除積分ネットワークの入力の値2^n-1を入れる入れ物
-        if tnorm == "daisu":#tnormの選択と計算を行う。
+        if tnorm == "daisu":#tnormの選択と計算を行う。ここでnumpyのforroopを2重にしてるから遅くなっていると思われる。
+            
+
+
+
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
-                        exec("h = h" + str(self.hh[length][num]))#最初にhに入れる変数をhにいれる。例h = h1
+                        h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
                     else:
-                        exec("h *= h" + str(self.hh[length][num]))#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
+                        h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
                 if length != 0:
-                    exec("box.append(h)")
+                    box.append(h)
         elif tnorm == "ronri":
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
-                        exec("h = h" + str(self.hh[length][num]))
+                        h = H[self.hh[length][num]-1]
                     else:
-                        exec("h = np.hstack([h.data,h" + str(self.hh[length][num]) + ".data])")#ｈにバッチサイズごとの変数の値を連結していく例(ｈ１、ｈ２,...)
+                        h = np.hstack([h.data,H[self.hh[length][num]-1].data])#ｈにバッチサイズごとの変数の値を連結していく例(ｈ１、ｈ２,...)
                 if length != 0 and num ==0:
-                    exec("box.append(h)")#１変数の場合はそのままboxに入れる
+                    box.append(h)#１変数の場合はそのままboxに入れる
                 else:
-                    exec("h = Variable(np.array([np.amin(h,axis=1)]).T)")#連結しておいた値を行ごとにminをとってバッチサイズ行1列の形にする
-                    exec("box.append(h)")#各バッチサイズで最も小さい値をboxにいれる
+                    h = Variable(np.array([np.amin(h,axis=1)]).T)#連結しておいた値を行ごとにminをとってバッチサイズ行1列の形にする
+                    box.append(h)#各バッチサイズで最も小さい値をboxにいれる
         elif tnorm == "dombi":#調整中
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
-                        exec("h = h" + str(self.hh[length][num]))
+                        h = H[self.hh[length][num]-1]
                     else:
-                        exec("h = 1/(1+((1/h-1)**self.ramda.W[0][" + str(length - len(x[0]) - 1) + "] + (1/h" + str(self.hh[length][num]) + " - 1)**self.ramda.W[0][" + str(length - len(x[0]) - 1) 
-                        + "])**-self.ramda.W[0][" + str(length - len(x[0]) - 1) + "])")
+                        h = 1/(1+((1/h-1)**self.ramda.W[0][length - len(x[0]) - 1] + (1/H[self.hh[length][num]-1] - 1)**self.ramda.W[0][length - len(x[0]) - 1])**-self.ramda.W[0][length - len(x[0]) - 1])
                         #exec("h = (0**h)**h" + str((self.hh[length][num])))
                 if length != 0:
-                    exec("box.append(h)")
+                    box.append(h)
         elif tnorm == "duboa":
            for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
-                        exec("h = h" + str(self.hh[length][num]))
+                        h = H[self.hh[length][num]-1]
                     else:#duboa_pradeの演算をバッチサイズごとに行う
-                        exec("h = h*h" + str(self.hh[length][num]) + "*(Variable(np.array([np.amax(np.hstack([h.data,h" + str(self.hh[length][num]) 
-                        + ".data, np.full((len(h),1),self.ramda.W[0][" + str(length - len(x[0]) - 1) + "].data)]),axis=1)]).T))**-1")
+                        h = h*H[self.hh[length][num]-1]*(Variable(np.array([np.amax(np.hstack([h.data,H[self.hh[length][num]-1].data, np.full((len(h),1),self.ramda.W[0][length - len(x[0]) - 1].data)]),axis=1)]).T))**-1
                 if length != 0:
-                    exec("box.append(h)")
+                    box.append(h)
         else:
             print("tnorm選択して")
         
