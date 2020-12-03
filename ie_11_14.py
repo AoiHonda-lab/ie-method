@@ -39,6 +39,7 @@ class IE(chainer.Chain):
         self.set_sum = calc.set_sum(self.hh)
 
         self.t_box = np.zeros((self.add,len(self.ie_data[0])))
+        self.t_unt_box = np.ones((self.add,len(self.ie_data[0])))
 
         print("===== hidden units =====", flush=True)
         print("{}".format(self.set_sum[-1]))
@@ -128,7 +129,7 @@ class IE(chainer.Chain):
                     else:
                         for l in i:
                             self.t_box[j-1,l-1] = 1
-
+                self.t_unt_box = self.t_unt_box - self.t_box
 
         elif(self.args.pre_shoki == 'random'):#初期値をランダムにする時
             with self.init_scope():
@@ -177,12 +178,12 @@ class IE(chainer.Chain):
         else:#相関係数から決める場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
                 H.append(F.sigmoid(self.l[num](X[num].reshape(1, len(x)).T)))
-
+        H_np = F.hstack(H)
         box = [] #各包除積分ネットワークの入力の値2^n-1を入れる入れ物
         if tnorm == "daisu":#tnormの選択と計算を行う。ここでnumpyのforroopを2重にしてるから遅くなっていると思われる。
-            
-
-
+            # for i in range(H[0].shape[0]):
+            #     box.append(F.prod(H_np[i,:]*self.t_box+self.t_unt_box, axis=1))
+            # ht = F.vstack(box)
 
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
@@ -192,6 +193,7 @@ class IE(chainer.Chain):
                         h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
                 if length != 0:
                     box.append(h)
+            ht = F.hstack(box)
         elif tnorm == "ronri":
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
@@ -204,6 +206,7 @@ class IE(chainer.Chain):
                 else:
                     h = Variable(np.array([np.amin(h,axis=1)]).T)#連結しておいた値を行ごとにminをとってバッチサイズ行1列の形にする
                     box.append(h)#各バッチサイズで最も小さい値をboxにいれる
+            ht = F.hstack(box)#htに形をととのえたやつを代入
         elif tnorm == "dombi":#調整中
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
@@ -214,8 +217,9 @@ class IE(chainer.Chain):
                         #exec("h = (0**h)**h" + str((self.hh[length][num])))
                 if length != 0:
                     box.append(h)
+            ht = F.hstack(box)#htに形をととのえたやつを代入
         elif tnorm == "duboa":
-           for length in range(1, self.add +1):
+            for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
                         h = H[self.hh[length][num]-1]
@@ -223,9 +227,8 @@ class IE(chainer.Chain):
                         h = h*H[self.hh[length][num]-1]*(Variable(np.array([np.amax(np.hstack([h.data,H[self.hh[length][num]-1].data, np.full((len(h),1),self.ramda.W[0][length - len(x[0]) - 1].data)]),axis=1)]).T))**-1
                 if length != 0:
                     box.append(h)
+            ht = F.hstack(box)#htに形をととのえたやつを代入
         else:
             print("tnorm選択して")
         
-
-        ht = F.hstack(box)#htに形をととのえたやつを代入
         return self.lt(ht)#ここでようやくltの各重みに入力となる値を入れて出力を返す
