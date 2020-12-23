@@ -25,7 +25,7 @@ class MLP(chainer.Chain):
         self.args = args
         with self.init_scope():
             self.fc1 = L.Linear(None, args.mlp_units)   
-            #self.fc2 = L.Linear(500, 500)         
+            self.fc2 = L.Linear(1000, 1000)         
             self.fc3 = L.Linear(args.mlp_units, self.args.out)
 
     # def relu_v(self, inputs):
@@ -38,13 +38,13 @@ class MLP(chainer.Chain):
         # h1 = self.relu_v(self.fc1(x))
         # h1 = self.relu_v(self.fc1(x))
         h1 = F.sigmoid(self.fc1(x))
-        #h2 = F.sigmoid(self.fc2(h1))
+        h2 = F.sigmoid(self.fc2(h1))
         # h1 = F.relu(self.fc1(x))
         # h1_= Variable(np.where(h1.data > 1, 1, h1.data))
         # h2 = self.relu_v(self.fc2(h1))
         # h2 = F.relu(self.fc2(h1))
         # h2_ =  Variable(np.where(h2.data > 1, 1, h2.data))
-        y = self.fc3(h1)
+        y = self.fc3(h2)
         return y
 
 

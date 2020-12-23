@@ -1,7 +1,5 @@
 # -*- coding: utf-8; -*-
 
-#変更してみた
-#ぶんぶんハローPYTHOｎ
 # import file
 import mlp
 import submlp
@@ -12,6 +10,7 @@ import calc
 import running
 
 # library
+import datetime
 import Hyperreal
 import os
 import argparse
@@ -41,6 +40,7 @@ def main():
 
 	# read config
 	parser = argparse.ArgumentParser()
+	dtn = datetime.datetime.now()
 	# モデルをリストに入れる
 	model_list = []
 	shape_list = []
@@ -48,12 +48,12 @@ def main():
 	parser.add_argument('--epoch', type=int, default=10, help='epoch for each generation')
 	parser.add_argument('--mlp_units', type=int, default=21, help='mlpの中間層のユニット数')
 	parser.add_argument('--subepoch', type=int, default=2000, help='前の学習をさせたかった')
-	parser.add_argument('--loss_epoch', type=int, default=50, help='テストデータに対する減少傾向が確認されてからの打ち切りまでの学習回数')
+	parser.add_argument('--loss_epoch', type=int, default=10000, help='テストデータに対する減少傾向が確認されてからの打ち切りまでの学習回数')
 	parser.add_argument('--null_impcount', type=int, default=1, help='null_importanceを見るための比較回数')
-	parser.add_argument('--add', type=int, default='2', help='add: 1 or 2 or 3 or 9(all)')
+	parser.add_argument('--add', type=int, default=6, help='add: 1 or 2 or 3 or 9(all)')
 	parser.add_argument('--data_model', type=str, default='Titanic_train_3pop', help='_3_3_pool_1_mnist_2class：CSVの入力ファイル指名')
 	parser.add_argument('--lossf', type=str, default='mse_sig', help='dataset: entoropy or mean_squrd：損失誤差関数')
-	parser.add_argument('--day', type=str, default='test_day', help='data_file_name：日付指定')
+	parser.add_argument('--day', type=str, default=str(dtn.month)+str(dtn.day)+str(dtn.hour)+str(dtn.minute), help='data_file_name：日付指定 例str(dtn.month)+str(dtn.day)+str(dtn.hour)+str(dtn.minute)')
 	parser.add_argument('--Titanic',type=str, default='on', help='on or off：タイタニックデータ用')
 	parser.add_argument('--acc_info',type=str, default='on', help='on or off：正答率や再現性とかの情報出力するか否か')
 	parser.add_argument('--tnorm', type=str, default='daisu', help='daisu or ronri or dombi or duboa')#tnormの型決め
@@ -61,7 +61,7 @@ def main():
 	parser.add_argument('--save_data', type=str, default='save', help='save or not')
 	parser.add_argument('--pre_ie', type=str, default='pre_mlp', help='premlp or precor')
 	parser.add_argument('--permuimp', type=str, default='off', help='premlp or precor')
-	parser.add_argument('--boot', type=int, default='200', help='ブートストラップ法で目的変数のデータ数を合わせる。その時の抽出するデータ数。1ならただの交差検証。目的変数の形は正の整数0~')
+	parser.add_argument('--boot', type=int, default='1000', help='ブートストラップ法で目的変数のデータ数を合わせる。その時の抽出するデータ数。1ならただの交差検証。目的変数の形は正の整数0~')
 	parser.add_argument('--pre_shoki', type=str,default='soukan',help='soukan:相関から初期値を決める,random:初期値をランダムに決める,units:適当なユニット数で学習')
 
 	#初期値手動で変えるとき使用
@@ -69,7 +69,7 @@ def main():
 
 	# k分割交差検証するときはk>1の整数。しないときはk=1にしてください。お願いします。あとk=1にしたらtrain_rateは0以上にしないとエラーが起きる
 	parser.add_argument('--train_rate',type=float ,default=1, help='0~1の間trainの割合を決める.1ならテストなし')
-	parser.add_argument('--k', type=int, default=2, help='k分割交差検証のkの値。1だと分割せずそれ以上の整数値だと分割する')
+	parser.add_argument('--k', type=int, default=1, help='k分割交差検証のkの値。1だと分割せずそれ以上の整数値だと分割する')
 	parser.add_argument('--sampling', type=str, default='Cluster', help='サンプリングの手法を選択')
 	parser.add_argument('--k_test', type=int, default=0, help='k分割交差検証のtestデータをさらに作るなら１にして')
 
@@ -77,16 +77,16 @@ def main():
 	parser.add_argument('--directri', type=str, default='Titanic', help='ディレクトリを指定')
 
 	# 正規化項用の引数
-	parser.add_argument('--norm', type=str, default='nashi', help='')
+	parser.add_argument('--norm', type=str, default='lt', help='l1 or l2 or lt')
 	parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 	parser.add_argument('--l_lr', type=float, default=0.001, help='learning rate')
 
 	# あんま変更しないパラメータ
 	parser.add_argument('--gpu_id', type=int, default=-1)
 	parser.add_argument('--out', type=int, default=1, help='units_out in each layer')
-	parser.add_argument('--batch_size', type=int, default=75)
+	parser.add_argument('--batch_size', type=int, default=200)
 	parser.add_argument('--func', type=str, default='relu_1', help='dataset: sigmoid or relu_1')
-	parser.add_argument('--model', type=str, default='mlp', help='dataset: mlp or cnn')
+	parser.add_argument('--model', type=str, default='ie', help='dataset: mlp or cnn')
 	parser.add_argument('--opt', type=str, default='adam', help='dataset: sgd or adam')
 	parser.add_argument('--shoki_opt', type=str, default='max_min', help='')
 	parser.add_argument('--train_number', type=int, default=2, help='learning rate')
@@ -222,7 +222,7 @@ def main():
 				else:
 					submodel = submlp.subMLP(args)
 					optimizer.setup(submodel)
-				model = ie_11_14.IE(args, ie_data, cov)
+				model = ie_11_14.IE(args, train, cov)
 				
 			optimizer.setup(model)
 			# for num in range(len(ie_data[0])):
@@ -421,6 +421,8 @@ def main():
 
 	print("平均決定係数:{}".format(memo))
 	print("平均赤池情報量規準:{}".format(memo2))
+
+	#calc.show_units(model)
 
 	if args.null_impcount == 1:
 		pass
