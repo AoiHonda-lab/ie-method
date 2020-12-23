@@ -151,7 +151,7 @@ class IE(chainer.Chain):
             
         with self.init_scope():
             # 中間層ー出力層の初期値取得
-            siki = calc.siki(self.add, train)
+            siki = calc.siki(self.add, len(self.ie_data[0]))
             # 初期値確保
             m = initializers.Constant(np.array(siki).T)
             m0 = initializers.Constant(np.array([0]))

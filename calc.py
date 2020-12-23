@@ -17,12 +17,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 def combinations_count(n, r):
 	return math.factorial(n) // (math.factorial(n - r) * math.factorial(r))
 
-def daisu(ie_data_len, args):
+def daisu(ie_data_len, add):
 # 代数積を取得
 	items = [i for i in range(1, ie_data_len+1)]
 	subsets=[]
 	for i in range(len(items) + 1):
-		if i > args.add:#二加法的まで
+		if i > add:#二加法的まで
 			break
 		for c in combinations(items, i):
 			subsets.append(list(c))
