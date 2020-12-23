@@ -1,0 +1,11 @@
+/.vscode
+/__pycache__
+/imbalanced-learn
+/result
+test.py
+Titanic_data_create.py
+Titanic_predict.py
+XG_boost.py
+xgboost_iris.py
+Hyperreal.py
+createdata.py

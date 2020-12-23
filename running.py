@@ -81,9 +81,9 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                 else:
                     for o in range(0, len(self.ie_data[0])*2):
                         if o % 2 == 0:
-                            exec("out_pre_w["+str(o)+"].append(inti_model.l"+str(int(o/2+1))+".W.data[0][0])")
+                            out_pre_w[o].append(inti_model.l[int(o/2+1)].W.data[0][0])
                         else:
-                            exec("out_pre_w["+str(o)+"].append(inti_model.l"+str(int(o/2+1))+".b.data[0])")
+                            out_pre_w[o].append(inti_model.l[int(o/2+1)].b.data[0])
                 
                 # 中間層ー出力層の重みを取得（記録用）
                 if self.args.out == 2:
@@ -126,6 +126,11 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
             self.cleargrads()#勾配のリセット
             loss.backward()#勾配の計算
             optimizer.update()#更新
+
+            if self.args.norm == "lt" and epoch > 100:
+                for i in range(self.lt.W.array.shape[1]):
+                    if abs(self.lt.W.data[0,i]) < 0.01:
+                        self.lt.W.data[0,i] = 0
             # _w = copy.deepcopy(self.lt.W.data)
             
             # 単調性をありにするとき
@@ -216,9 +221,9 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
         else:
             for t in range(0, len(self.ie_data[0])*2):
                 if t % 2 == 0:
-                    exec("out_pre_w["+str(t)+"].append(self.l"+str(int(t/2+1))+".W.data[0][0])")
+                    out_pre_w[t].append(self.l[int(t/2+1)].W.data[0][0])
                 else:
-                    exec("out_pre_w["+str(t)+"].append(self.l"+str(int(t/2+1))+".b.data[0])")
+                    out_pre_w[t].append(self.l[int(t/2+1)].b.data[0])
 
         if self.args.out == 2:
             for u in range(self.add):            
