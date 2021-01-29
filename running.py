@@ -109,8 +109,8 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                     y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
                     acc = F.accuracy(y_, target.astype('int32'))
                 elif self.args.lossf == "mse_sig":
-                    loss  = F.mean_squared_error(F.sigmoid(y), F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))
-                    y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
+                    loss  = F.mean_squared_error(y, F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))#出力にsigmoidつけた
+                    y_ = F.concat((1-y, y),axis=1)
                     acc = F.accuracy(y_.array, target.astype('int32'))
                 elif self.args.lossf == "mse":
                     loss  = F.mean_squared_error(y, F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))
@@ -180,8 +180,8 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                     y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
                     acc = F.accuracy(y_, target.astype('int32'))
                 elif self.args.lossf == "mse_sig":
-                    loss  = F.mean_squared_error(F.sigmoid(y), F.reshape(target,(len(test_batch),1)).data.astype(np.float32))
-                    y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
+                    loss  = F.mean_squared_error(y, F.reshape(target,(len(test_batch),1)).data.astype(np.float32))
+                    y_ = F.concat((1-y, y),axis=1)
                     acc = F.accuracy(y_, target.astype('int32'))
                 elif self.args.lossf == "mse":
                     loss  = F.mean_squared_error(y, F.reshape(target,(len(test_batch),1)).data.astype(np.float32))

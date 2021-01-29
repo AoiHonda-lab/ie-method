@@ -9,3 +9,5 @@ XG_boost.py
 xgboost_iris.py
 Hyperreal.py
 createdata.py
+etc_model_1cross.py
+etc_model_kcross.py

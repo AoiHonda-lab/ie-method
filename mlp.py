@@ -25,8 +25,9 @@ class MLP(chainer.Chain):
         self.args = args
         with self.init_scope():
             self.fc1 = L.Linear(None, args.mlp_units)   
-            self.fc2 = L.Linear(1000, 1000)         
-            self.fc3 = L.Linear(args.mlp_units, self.args.out)
+            self.fc2 = L.Linear(args.mlp_units, args.mlp_units)  
+            # self.fc3 = L.Linear(args.mlp_units, args.mlp_units)       
+            self.fc4 = L.Linear(args.mlp_units, self.args.out)
 
     # def relu_v(self, inputs):
     #     x = inputs
@@ -37,14 +38,19 @@ class MLP(chainer.Chain):
     def __call__(self, x):
         # h1 = self.relu_v(self.fc1(x))
         # h1 = self.relu_v(self.fc1(x))
-        h1 = F.sigmoid(self.fc1(x))
+        h1 = self.fc1(x)
         h2 = F.sigmoid(self.fc2(h1))
+        # h3 = F.sigmoid(self.fc3(h2))
         # h1 = F.relu(self.fc1(x))
         # h1_= Variable(np.where(h1.data > 1, 1, h1.data))
         # h2 = self.relu_v(self.fc2(h1))
         # h2 = F.relu(self.fc2(h1))
         # h2_ =  Variable(np.where(h2.data > 1, 1, h2.data))
-        y = self.fc3(h2)
+        y = self.fc4(h2)
+        if self.args.lossf == "mse_sig":
+            return F.sigmoid(y)
+        else:
+            pass
         return y
 
 
@@ -85,8 +91,8 @@ class MLP(chainer.Chain):
                         y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
                         acc = F.accuracy(y_, target.astype('int32'))
                     elif self.args.lossf == "mse_sig":
-                        loss  = F.mean_squared_error(F.sigmoid(y), F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))
-                        y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
+                        loss  = F.mean_squared_error(y, F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))
+                        y_ = F.concat((1-y, y),axis=1)
                         acc = F.accuracy(y_.array, target.astype('int32'))
                     elif self.args.lossf == "mse":
                         loss  = F.mean_squared_error(y, F.reshape(target,(self.args.batch_size,1)).data.astype(np.float32))
@@ -101,7 +107,6 @@ class MLP(chainer.Chain):
                     #y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
                     #acc = F.accuracy(y_, target)
 
-               
                 self.cleargrads()
                 loss.backward()
                 optimizer.update()
@@ -134,8 +139,8 @@ class MLP(chainer.Chain):
                     y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
                     acc = F.accuracy(y_, target.astype('int32'))
                 elif self.args.lossf == "mse_sig":
-                    loss  = F.mean_squared_error(F.sigmoid(y), F.reshape(target,(len(test_batch),1)).data.astype(np.float32))
-                    y_ = F.concat((1-F.sigmoid(y), F.sigmoid(y)),axis=1)
+                    loss  = F.mean_squared_error(y, F.reshape(target,(len(test_batch),1)).data.astype(np.float32))
+                    y_ = F.concat((1-y, y),axis=1)
                     acc = F.accuracy(y_, target.astype('int32'))
                 elif self.args.lossf == "mse":
                     loss  = F.mean_squared_error(y, F.reshape(target,(len(test_batch),1)).data.astype(np.float32))

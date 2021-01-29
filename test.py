@@ -2,9 +2,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import xgboost as xgb
 from sklearn.datasets import load_breast_cancer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 
 #data = pd.read_csv('./data/kaggle/nba_final.csv')
 #print(data.head())
@@ -13,12 +13,173 @@ import seaborn as sns #importing seaborn module
 import warnings
 
 import random as rnd
-
+from sklearn.svm import SVR
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeRegressor
+# Support Vector Machines
+import pickle 
+import chainer
+import chainer
+from chainer.datasets import split_dataset_random, get_cross_validation_datasets_random
+from chainer import iterators, optimizers, serializers, cuda
+from chainer.optimizer_hooks import WeightDecay, Lasso
+
+import mlp
+import submlp
+# import training
+import saving_data
+import ie_11_14
+import calc
+import running
+
+# library
+import datetime
+import os
+import argparse
+import random
+import pickle
+import sys
+import copy
+import math
+import pandas as pd
+import numpy as np
+import csv
+import time
+import pylab
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import ClusterCentroids, RandomUnderSampler
+
+data = pd.read_csv('./data/sklearn_data/diabesets_normalize_row.csv')
+
+X_train = data.drop("Y", axis=1)
+y_train = data["Y"]
+
+# reg_linear = SVR(kernel='linear', C=1, epsilon=0.1)
+# reg_poly = SVR(kernel='poly', C=1, epsilon=0.1)
+# reg_rbf = SVR(kernel='rbf', C=1, epsilon=0.1)
+
+# reg_linear.fit(X_train, np.ravel(y_train))
+# reg_poly.fit(X_train, np.ravel(y_train))
+# reg_rbf.fit(X_train, np.ravel(y_train))
+
+# scores = (reg_linear.score(X_train, y_train),
+# reg_poly.score(X_train, y_train),
+# reg_rbf.score(X_train, y_train))
+
+# plt.bar(("Linear", "poly", "RBF"), scores)
+# plt.xlabel("Kernel")
+# plt.ylabel("$R^2$ score")
+# plt.show()
+
+# pre_linear = reg_linear.predict(X_train)
+# pre_poly = reg_poly.predict(X_train)
+# pre_rbf = reg_rbf.predict(X_train)
+
+# print("mse linear:{}".format(mean_squared_error(y_train, pre_linear)))
+# print("mse poly:{}".format(mean_squared_error(y_train, pre_poly)))
+# print("mse rbf:{}".format(mean_squared_error(y_train, pre_rbf)))
+# print("mae linear:{}".format(mean_absolute_error(y_train, pre_linear)))
+# print("mae poly:{}".format(mean_absolute_error(y_train, pre_poly)))
+# print("mae rbf:{}".format(mean_absolute_error(y_train, pre_rbf)))
+# print("R2:{}".format(scores))
+# Gaussian Naive Bayes
+
+# gaussian = GaussianNB()
+# gaussian.fit(X_train, Y_train)
+# Y_pred = gaussian.predict(X_test)
+# acc_gaussian = round(gaussian.score(X_train, Y_train) * 100, 2)
+# acc_gaussian
+
+# Perceptron
+
+# perceptron = Perceptron()
+# perceptron.fit(X_train, Y_train)
+# Y_pred = perceptron.predict(X_test)
+# acc_perceptron = round(perceptron.score(X_train, Y_train) * 100, 2)
+# acc_perceptron
+
+# Linear SVC
+
+# linear_svc = LinearSVC()
+# linear_svc.fit(X_train, Y_train)
+# Y_pred = linear_svc.predict(X_test)
+# acc_linear_svc = round(linear_svc.score(X_train, Y_train) * 100, 2)
+# acc_linear_svc
+
+# Stochastic Gradient Descent
+
+# sgd = SGDClassifier()
+# sgd.fit(X_train, Y_train)
+# Y_pred = sgd.predict(X_test)
+# acc_sgd = round(sgd.score(X_train, Y_train) * 100, 2)
+# acc_sgd
+
+# Decision Tree
+
+decision_tree = DecisionTreeRegressor(max_depth=20)
+decision_tree.fit(X_train, y_train)
+Y_pred = decision_tree.predict(X_train)
+print("mse decision:{}".format(mean_squared_error(y_train, Y_pred)))
+print("mae decision:{}".format(mean_absolute_error(y_train, Y_pred)))
+print("R2  decision:{}".format(decision_tree.score(X_train,y_train)))
+# acc_decision_tree = round(decision_tree.score(X_train, Y_train) * 100, 2)
+# acc_decision_tree
+
+# Random Forest
+
+random_forest = RandomForestRegressor(n_estimators=100, max_depth=20)
+random_forest.fit(X_train, y_train)
+Y_pred = random_forest.predict(X_train)
+print("mse decision:{}".format(mean_squared_error(y_train, Y_pred)))
+print("mae decision:{}".format(mean_absolute_error(y_train, Y_pred)))
+print("randomR2: {}".format(random_forest.score(X_train, y_train)))
+# acc_random_forest = round(random_forest.score(X_train, Y_train) * 100, 2)
+# acc_random_forest
+
+
+
+xgb_params = {
+                'max_depth':20,
+                'objective': 'reg:linear',
+                'eval_metric': 'rmse',
+                # 'min_child_weight':2,
+                # 'max_delta_step':6,
+                # 'alpha':1/6,
+}
+dtrain = xgb.DMatrix(X_train, label=y_train)
+watch = [(dtrain,'train'),(dtrain,'eval')]
+evals_result = {}
+bst = xgb.train(xgb_params,
+        dtrain,
+        num_boost_round=100,
+        early_stopping_rounds=10,
+        evals=watch,
+        )
+Y_pred = bst.predict(dtrain, ntree_limit = bst.best_ntree_limit)
+
+print("mse xgb:{}".format(mean_squared_error(y_train, Y_pred)))
+print("mae xgb:{}".format(mean_absolute_error(y_train, Y_pred)))
+print("xgbR2: {}".format(r2_score(y_train, Y_pred)))
+models = pd.DataFrame({
+    'Model': ['Support Vector Machines', 'KNN', 'Logistic Regression', 
+              'Random Forest', 'Naive Bayes', 'Perceptron', 
+              'Stochastic Gradient Decent', 'Linear SVC', 
+              'Decision Tree'],
+    'Score': [acc_svc, acc_knn, acc_log, 
+              acc_random_forest, acc_gaussian, acc_perceptron, 
+              acc_sgd, acc_linear_svc, acc_decision_tree]})
+models.sort_values(by='Score', ascending=False)
 
 train_df = pd.read_csv('./data/Titanic/train_row.csv')
 test_df = pd.read_csv('./data/Titanic/test_row.csv')
 combine = [train_df, test_df]
+
+
 
 print("Before", train_df.shape, test_df.shape, combine[0].shape, combine[1].shape)
 

@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pandas as pd
 import csv
 import pprint
 import random
@@ -12,7 +13,7 @@ from sklearn.model_selection import KFold
 from itertools import chain,combinations
 from chainer.optimizer_hooks import WeightDecay, Lasso
 import chainer.functions as F
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve,roc_auc_score, precision_recall_fscore_support, r2_score, mean_squared_error
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_curve,roc_auc_score, precision_recall_fscore_support, r2_score, mean_squared_error, mean_absolute_error
 # n C r
 def combinations_count(n, r):
 	return math.factorial(n) // (math.factorial(n - r) * math.factorial(r))
@@ -77,7 +78,7 @@ def each_ie_data_and_cov(train):
 	
 	return ie_data, cov
 
-def ie_data_and_cov(train):
+def ie_data_and_cov(train):#
 	ie_data = []
 	# h, v = train[-1][0].shape
 	for i in range(len(train)):
@@ -150,10 +151,7 @@ def craft_titanic(model, args, data, no):
 	test_ID = []
 	for i in range(data.shape[0]):
 			test_ID.append(int(892+i))
-	if args.lossf == 'mse':
-		y_pred = np.where(model(data).array > 0.5, 1, 0)
-	elif args.lossf == 'mse_sig':
-		y_pred = np.where(F.sigmoid(model(data)).array > 0.5 ,1, 0)
+	y_pred = np.where(model(data).array > 0.5, 1, 0)
 	if args.model == 'ie':
 		np.savetxt('./result/test/Mt_{}_{}_{}_{}_{}_add{}_mdlno{}.csv'.format(args.day, args.norm,args.model,args.data_model, args.opt, args.add, no),np.vstack((np.array(test_ID,dtype = 'int32'),y_pred.reshape(-1,))).T, header='PassengerId,Survived',fmt='%d',delimiter=',',comments='')
 	else:
@@ -165,12 +163,8 @@ def craft_titanic_sum(model_list, args, data):
 	for i in range(data.shape[0]):
 			test_ID.append(int(892+i))
 
-	if args.lossf == 'mse':
-		for mod in model_list:
-			y_pred += mod(data).array
-	elif args.lossf == 'mse_sig':
-		for mod in model_list:
-			y_pred += F.sigmoid(mod(data)).array
+	for mod in model_list:
+		y_pred += mod(data).array
 	y_pred = y_pred/len(model_list)
 	y_pred = np.where(y_pred > 0.5, 1, 0)
 	if args.model == 'ie':
@@ -215,19 +209,24 @@ def accuracy(y_true,y_score):
 	return score, precision, recall, f1, AUC
 
 def print_r2(y_true, y_score, lossf):
-	if lossf == 'mse_sig':
-		y_score = F.sigmoid(y_score).array
+	
 	print("平均決定係数:{}".format(r2_score(y_true, y_score)))
 	pass
 
 def calc_r2(y_true, y_score, lossf):
-	if lossf == 'mse_sig':
-		y_score = F.sigmoid(y_score).array
+	
 	return r2_score(y_true, y_score)
 
+def calc_mse(y_true, y_score, lossf):
+	
+	return mean_squared_error(y_true, y_score)
+
+def calc_mae(y_true, y_score, lossf):
+	
+	return mean_absolute_error(y_true, y_score)
+
 def calc_ak_mse(y_true, y_score, lossf, valuesize):
-	if lossf == 'mse_sig':
-		y_score = F.sigmoid(y_score).array
+	
 	sigma_2 = mean_squared_error(y_true, y_score)
 	sigma = np.sqrt(sigma_2)
 	M = y_true.size
@@ -270,5 +269,27 @@ def cross_valid_custum(dataset, k, boot=1):
 			X1_train = data[0:data.shape[0], 1:data.shape[1]]
 			X_train = chainer.datasets.TupleDataset(X1_train, Y_train)
 		kf_list.append((X_train, X_test))
+	return kf_list
+
+def cross_valid_custum_df(dataset, k, boot=1):
+	kf = KFold(n_splits = k, shuffle = True)
+	kf_list = []
+	if boot == 1:
+		data_boot = dataset
+	else:
+		for train_index, test_index in kf.split(dataset):
+			train_df = dataset.iloc[train_index]
+			test_df  = dataset.iloc[test_index]
+			data_boot = pd.concat([train_df[train_df["Y"]==0].sample(n=boot, replace=True),train_df[train_df["Y"]==1].sample(n=boot, replace=True)]).sample(frac=1, random_state=0)
+
+			X_train = data_boot.drop("Y", axis=1)
+			y_train = data_boot["Y"]
+			train_chain = chainer.datasets.TupleDataset(X_train.values, y_train.real)
+
+			X_test  = test_df.drop("Y", axis=1)
+			y_test  = test_df["Y"]
+			test_chain = chainer.datasets.TupleDataset(X_test.values, y_test.real)
+				
+			kf_list.append((train_chain, test_chain))
 	return kf_list
 
