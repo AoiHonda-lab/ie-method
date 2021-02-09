@@ -26,7 +26,7 @@ class MLP(chainer.Chain):
         with self.init_scope():
             self.fc1 = L.Linear(None, args.mlp_units)   
             self.fc2 = L.Linear(args.mlp_units, args.mlp_units)  
-            # self.fc3 = L.Linear(args.mlp_units, args.mlp_units)       
+            self.fc3 = L.Linear(args.mlp_units, args.mlp_units)       
             self.fc4 = L.Linear(args.mlp_units, self.args.out)
 
     # def relu_v(self, inputs):
@@ -38,15 +38,15 @@ class MLP(chainer.Chain):
     def __call__(self, x):
         # h1 = self.relu_v(self.fc1(x))
         # h1 = self.relu_v(self.fc1(x))
-        h1 = self.fc1(x)
+        h1 = F.sigmoid(self.fc1(x))
         h2 = F.sigmoid(self.fc2(h1))
-        # h3 = F.sigmoid(self.fc3(h2))
+        h3 = F.sigmoid(self.fc3(h2))
         # h1 = F.relu(self.fc1(x))
         # h1_= Variable(np.where(h1.data > 1, 1, h1.data))
         # h2 = self.relu_v(self.fc2(h1))
         # h2 = F.relu(self.fc2(h1))
         # h2_ =  Variable(np.where(h2.data > 1, 1, h2.data))
-        y = self.fc4(h2)
+        y = self.fc4(h3)
         if self.args.lossf == "mse_sig":
             return F.sigmoid(y)
         else:

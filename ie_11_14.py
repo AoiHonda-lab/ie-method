@@ -134,13 +134,13 @@ class IE(chainer.Chain):
                 #前半の層のユニットを増やしたもの
                 self.fa = []
                 self.fb = []
-                self.fc = []
-                self.fd = []
+                #self.fc = []
+                #self.fd = []
                 for num in range(len(self.ie_data[0])):
-                    self.fa.append(L.Linear(1, 300))  
-                    self.fc.append(L.Linear(300, 300))
-                    self.fd.append(L.Linear(300, 300))
-                    self.fb.append(L.Linear(300, 1)) 
+                    self.fa.append(L.Linear(1, 1000))  
+                    #self.fc.append(L.Linear(1000, 1000))
+                    #self.fd.append(L.Linear(300, 300))
+                    self.fb.append(L.Linear(1000, 1)) 
         else:
             print('error:前準備部分でpre_shokiの設定ミス')
 
@@ -181,7 +181,8 @@ class IE(chainer.Chain):
         H = []
         if self.args.pre_shoki == "units":#多数のユニットで学習する場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
-                H.append(F.sigmoid(self.fb[num](F.sigmoid(self.fd[num](F.sigmoid(self.fc[num](F.sigmoid(self.fa[num](X[num].reshape(1, len(x)).T)))))))))
+                #H.append(F.sigmoid(self.fb[num](F.sigmoid(self.fd[num](F.sigmoid(self.fc[num](F.sigmoid(self.fa[num](X[num].reshape(1, len(x)).T)))))))))
+                H.append(F.sigmoid(self.fb[num](F.sigmoid(self.fa[num](X[num].reshape(1, len(x)).T)))))
         else:#相関係数から決める場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
                 H.append(F.sigmoid(self.l[num](X[num].reshape(1, len(x)).T.astype("float32"))))

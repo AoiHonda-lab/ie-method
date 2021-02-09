@@ -43,10 +43,10 @@ def main():
 	model_list = []
 	shape_list = []
 	# よく変更するパラメータ
-	parser.add_argument('--epoch', type=int, default=1000, help='epoch for each generation')
-	parser.add_argument('--mlp_units', type=int, default=1000, help='mlpの中間層のユニット数')
+	parser.add_argument('--epoch', type=int, default=10000, help='epoch for each generation')
+	parser.add_argument('--mlp_units', type=int, default=100, help='mlpの中間層のユニット数')
 	parser.add_argument('--subepoch', type=int, default=2000, help='前の学習をさせたかった')
-	parser.add_argument('--loss_epoch', type=int, default=10000, help='テストデータに対する減少傾向が確認されてからの打ち切りまでの学習回数')
+	parser.add_argument('--loss_epoch', type=int, default=100, help='テストデータに対する減少傾向が確認されてからの打ち切りまでの学習回数')
 	parser.add_argument('--null_impcount', type=int, default=1, help='null_importanceを見るための比較回数')
 	parser.add_argument('--add', type=int, default=2, help='add: 1 or 2 or 3 or 9(all)')
 	parser.add_argument('--data_model', type=str, default='Titanic_train_3pop_df', help='_3_3_pool_1_mnist_2class：CSVの入力ファイル指名')
@@ -120,8 +120,13 @@ def main():
 	
 	valuesize = dataset.shape[1]
 	#Y = (dataset[1:dataset.shape[0], 0]).astype(np.int32)
-	Y = data_s["Y"].real 
-	X1 = data_s.drop("Y", axis=1).values
+	if args.k == 1 and args.boot != 1:
+		data_boot = pd.concat([data[data["Y"]==0].sample(n=args.boot, replace=True),data[data["Y"]==1].sample(n=args.boot, replace=True)]).sample(frac=1, random_state=0)
+		Y = data_boot["Y"].real
+		X1 = data_boot.drop("Y", axis=1).values
+	else:
+		Y = data_s["Y"].real 
+		X1 = data_s.drop("Y", axis=1).values
 
 	#クラスタリングの選択
 	if args.sampling == 'ClusterCentroids':
@@ -307,12 +312,14 @@ def main():
 			from scipy.stats import rankdata
 			print(np.round(np.array(shape_list), decimals=3))
 			print('平均シャープレイ値',np.round(np.mean(np.array(shape_list),axis=0), decimals=4))
-			np.savetxt('./result/train/shape/shaplay_add{}_lsepo{}_{}cross_{}data_sum.csv'.format(args.add, args.loss_epoch, args.k, args.data_model), np.round(np.mean(np.array(shape_list),axis=0), decimals=4) ,fmt='%.4f',delimiter=',')
-			np.savetxt('./result/train/shape/shaplay_add{}_lsepo{}_{}cross_{}data_rank.csv'.format(args.add, args.loss_epoch, args.k, args.data_model), rankdata(-np.round(np.mean(np.array(shape_list),axis=0), decimals=4)) ,fmt='%.4f',delimiter=',')
+
+			np.savetxt('./result/train/shape/shaplay_{}_add{}_lsepo{}_{}cross_{}data_{}_sum.csv'.format(args.day,args.add, args.loss_epoch, args.k, args.data_model, args.pre_shoki), 
+				np.vstack([rankdata(-np.round(np.mean(np.array(shape_list),axis=0), decimals=4)),np.round(np.mean(np.array(shape_list),axis=0), decimals=4)]).T ,fmt='%.4f',delimiter=',')
 			
 			print('平均重要度',np.round(np.mean(np.array(abs(np.array(shape_list))), axis=0), decimals=4))
-			np.savetxt('./result/train/shape/impor_add{}_lsepo{}_sum.csv'.format(args.add, args.loss_epoch), np.round(np.mean(np.array(abs(np.array(shape_list))), axis=0), decimals=4) ,fmt='%.4f',delimiter=',')
-			np.savetxt('./result/train/shape/impor_add{}_lsepo{}_rank.csv'.format(args.add, args.loss_epoch), rankdata(-np.round(np.mean(np.array(abs(np.array(shape_list))), axis=0), decimals=4)) ,fmt='%.4f',delimiter=',')
+			np.savetxt('./result/train/shape/impor_{}_add{}_lsepo{}_{}cross_{}_data_{}_sum.csv'.format(args.day,args.add, args.loss_epoch, args.k, args.data_model, args.pre_shoki), 
+				np.vstack([rankdata(-np.round(np.mean(np.array(abs(np.array(shape_list))), axis=0), decimals=4)),np.round(np.mean(np.array(abs(np.array(shape_list))), axis=0), decimals=4)]).T ,fmt='%.4f',delimiter=',')
+			
 		
 		if args.k > 1:#labelが2値の場合に使用する
 			if args.acc_info == "on":
