@@ -39,9 +39,11 @@ def saving_ie(summry, args, no = 0):
 	else:
 		out_w = post
 
-	with open("./result/train/ww/w_ww/W_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.csv".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), 'w') as f:
-		writer = csv.writer(f, lineterminator='\n', delimiter='\t')
-		writer.writerows(out_w)
+	# with open("./result/train/ww/w_ww/W_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.csv".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), 'w') as f:
+	# 	writer = csv.writer(f, lineterminator='\n', delimiter='\t')
+	# 	writer.writerows(out_w)
+
+	np.savetxt("./result/train/ww/w_ww/W_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.csv".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), out_w,fmt='%.4f',delimiter=',')
 
 	# シャプレイ値保存
 	np.savetxt('./result/train/shape/shaplay_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_0_{}_mno{}.csv'.format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr, args.pre_shoki, args.data_model, args.model, args.not_monotony ,args.train_number, no), np.array(summry[4]) ,fmt='%.4f',delimiter=',')

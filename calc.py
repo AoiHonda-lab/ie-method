@@ -274,22 +274,23 @@ def cross_valid_custum(dataset, k, boot=1):
 def cross_valid_custum_df(dataset, k, boot=1):
 	kf = KFold(n_splits = k, shuffle = True)
 	kf_list = []
-	if boot == 1:
-		data_boot = dataset
-	else:
-		for train_index, test_index in kf.split(dataset):
-			train_df = dataset.iloc[train_index]
-			test_df  = dataset.iloc[test_index]
+	
+	for train_index, test_index in kf.split(dataset):
+		train_df = dataset.iloc[train_index]
+		test_df  = dataset.iloc[test_index]
+		if boot == 1:
+			data_boot = train_df
+		else:
 			data_boot = pd.concat([train_df[train_df["Y"]==0].sample(n=boot, replace=True),train_df[train_df["Y"]==1].sample(n=boot, replace=True)]).sample(frac=1, random_state=0)
 
-			X_train = data_boot.drop("Y", axis=1)
-			y_train = data_boot["Y"]
-			train_chain = chainer.datasets.TupleDataset(X_train.values, y_train.real)
+		X_train = data_boot.drop("Y", axis=1)
+		y_train = data_boot["Y"]
+		train_chain = chainer.datasets.TupleDataset(X_train.values, y_train.real)
 
-			X_test  = test_df.drop("Y", axis=1)
-			y_test  = test_df["Y"]
-			test_chain = chainer.datasets.TupleDataset(X_test.values, y_test.real)
-				
-			kf_list.append((train_chain, test_chain))
+		X_test  = test_df.drop("Y", axis=1)
+		y_test  = test_df["Y"]
+		test_chain = chainer.datasets.TupleDataset(X_test.values, y_test.real)
+			
+		kf_list.append((train_chain, test_chain))
 	return kf_list
 
