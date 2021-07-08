@@ -32,9 +32,17 @@ class IE(chainer.Chain):
         self.dtype = np.float32
 
         # 代数積を取得
-        self.hh = calc.daisu(len(self.ie_data[0]), args.add)
-        # 集合を作成し取得
-        self.add = calc.add(self.args.add, len(self.ie_data[0]))   
+        if args.matrixtype == 2:
+            self.hh = calc.rnn_matrix(len(self.ie_data[0]))
+            self.add = len(self.ie_data[0])*2-1
+        elif args.matrixtype == 3:
+            self.hh = calc.bi_rnn_matrix(len(self.ie_data[0]))
+            self.add = len(self.ie_data[0])*3-3
+        else:
+            self.hh = calc.daisu(len(self.ie_data[0]), args.add)
+            # 集合を作成し取得
+            self.add = calc.add(self.args.add, len(self.ie_data[0]))   
+        
         # 各点集合の長さ[9, 45, 129, ,,, 510, 511]
         self.set_sum = calc.set_sum(self.hh)
 
@@ -55,8 +63,8 @@ class IE(chainer.Chain):
                         # min_data = cp.min(cp.array(ie_data), axis = 0)
                         pass
                     else:
-                        max_data = np.max(np.array(train._datasets[0]), axis = 0)
-                        min_data = np.min(np.array(train._datasets[0]), axis = 0)
+                        max_data = np.max(np.array(self.ie_data), axis = 0)
+                        min_data = np.min(np.array(self.ie_data), axis = 0)
                 elif args.shoki_opt == "var_mean":
                     max_data = []
                     min_data = []
@@ -70,7 +78,7 @@ class IE(chainer.Chain):
                             pass
                     else:
                         for ip in range(len(len(self.ie_data[0]))):
-                            data = np.array([i[1] for i in enumerate(self.ie_data[0].T[ip]) if np.mean(self.ie_data[0], axis = 0)[ip] - 2 * np.std(self.ie_data[0], axis = 0)[ip]  < i[1] and i[1] <= np.mean(self.ie_data[0], axis = 0)[ip] + 2 * np.mean(self.ie_data[0], axis = 0)[ip]])
+                            data = np.array([i[1] for i in enumerate(self.ie_data.T[ip]) if np.mean(self.ie_data, axis = 0)[ip] - 2 * np.std(self.ie_data, axis = 0)[ip]  < i[1] and i[1] <= np.mean(self.ie_data, axis = 0)[ip] + 2 * np.mean(self.ie_data, axis = 0)[ip]])
                             max_data.append(np.max(data))
                             min_data.append(np.min(data))
 
@@ -102,16 +110,17 @@ class IE(chainer.Chain):
                 #         exec("self.fa"+ str(num + 1) + " = L.Linear(1, 1000, initialW=submodel.fc1.W.array[:, "+ str(num) +", np.newaxis], initial_bias=submodel.fc1.b.array)")  
                 #         exec("self.fb"+ str(num + 1) + " = L.Linear(1000, 1, initialW=submodel.fc3.W.array[:, "+ str(num) +", np.newaxis], initial_bias=submodel.fc3.b.array)") 
                 # else:
-
                 #初期値の入力を行っていく
                 with self.init_scope():
                     self.l = []
                     for num in range(len(self.ie_data[0])):
                         if self.args.gpu_id >= 0:
-                            self.l.append(L.Linear(1, 1, initialW=cp.asnumpy(a[num]), initial_bias=cp.asnumpy(b[num])))
-                            self.l[num].to_gpu(self.args.gpu_id)
+                            exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=cp.asnumpy(a[" + str(num) + "]), initial_bias=cp.asnumpy(b[" + str(num) + "]))")
+                            exec("self.l"+str(num + 1)+".to_gpu(self.args.gpu_id)")
+                            exec("self.l.append(self.l" + str(num + 1) + ")")
                         else:
-                            self.l.append(L.Linear(1, 1, initialW=a[num], initial_bias=b[num]))
+                            exec("self.l" + str(num + 1) + "= L.Linear(1, 1, initialW=a[" + str(num) + "], initial_bias=b[" + str(num) + "])")
+                            exec("self.l.append(self.l" + str(num + 1) + ")")
 
                 #初期値の入力を行っていく
                 # with self.init_scope():
@@ -134,13 +143,11 @@ class IE(chainer.Chain):
                 #前半の層のユニットを増やしたもの
                 self.fa = []
                 self.fb = []
-                #self.fc = []
-                #self.fd = []
                 for num in range(len(self.ie_data[0])):
-                    self.fa.append(L.Linear(1, 1000))  
-                    #self.fc.append(L.Linear(1000, 1000))
-                    #self.fd.append(L.Linear(300, 300))
-                    self.fb.append(L.Linear(1000, 1)) 
+                    exec("self.fa" + str(num + 1) + "= L.Linear(1, 500)")
+                    exec("self.fb" + str(num + 1) + "= L.Linear(500, 1)")
+                    exec("self.fa.append(self.fa" + str(num + 1) + ")")  
+                    exec("self.fb.append(self.fb" + str(num + 1) + ")")
         else:
             print('error:前準備部分でpre_shokiの設定ミス')
 
@@ -152,7 +159,7 @@ class IE(chainer.Chain):
                 for l in i:
                     self.t_box[j-1,l-1] = 1
         self.t_unt_box = self.t_unt_box - self.t_box
-            
+
         with self.init_scope():
             # 中間層ー出力層の初期値取得
             siki = calc.siki(self.add, len(self.ie_data[0]))
@@ -171,8 +178,7 @@ class IE(chainer.Chain):
 
     def __call__(self, x, tnorm = "daisu"):#関数が呼び出されるたびに実行される処理xのとなりにsubmodel
         X = []
-        
-        #t_bo  = np.ones((self.add, x.shape[1], x.shape[0]))
+        t_box  = np.ones((self.add, x.shape[1], x.shape[0]))
 
         for num in range(len(self.ie_data[0])):#xにバッチサイズごとのデータを入れていく
             X.append(x[:, num]) 
@@ -181,11 +187,10 @@ class IE(chainer.Chain):
         H = []
         if self.args.pre_shoki == "units":#多数のユニットで学習する場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
-                #H.append(F.sigmoid(self.fb[num](F.sigmoid(self.fd[num](F.sigmoid(self.fc[num](F.sigmoid(self.fa[num](X[num].reshape(1, len(x)).T)))))))))
-                H.append(F.sigmoid(self.fb[num](F.sigmoid(self.fa[num](X[num].reshape(1, len(x)).T)))))
+                H.append(F.sigmoid(self.fb[num](self.fa[num](X[num].reshape(1, len(x)).T))))
         else:#相関係数から決める場合
             for num in range(len(self.ie_data[0])):#一個の変数のときのやつをhの最初に入れている。
-                H.append(F.sigmoid(self.l[num](X[num].reshape(1, len(x)).T.astype("float32"))))
+                H.append(F.sigmoid(self.l[num](X[num].reshape(1, len(x)).T)))
         H_np = F.hstack(H)
         box = [] #各包除積分ネットワークの入力の値2^n-1を入れる入れ物
         if tnorm == "daisu":#tnormの選択と計算を行う。ここでnumpyのforroopを2重にしてるから遅くなっていると思われる。
@@ -195,24 +200,24 @@ class IE(chainer.Chain):
             # ht = F.vstack(box)
 
             #べき集合の行列を作成v3
-            # for i, j in zip(self.hh, range(self.add+1)):
-            #     if i == []:
-            #         pass
-            #     else:
-            #         for l in i:
-            #             t_bo[j-1,l-1] = H_np[:,l-1].array
-            # ht = F.prod(t_bo.astype("float32"), axis=1).T 
+            for i, j in zip(self.hh, range(self.add+1)):
+                if i == []:
+                    pass
+                else:
+                    for l in i:
+                        t_box[j-1,l-1] = H_np[:,l-1].array
+            ht = F.prod(t_box.astype("float32"), axis=1).T 
 
             # v1
-            for length in range(1, self.add +1):
-                for num in range(len(self.hh[length])):
-                    if num == 0:
-                        h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
-                    else:
-                        h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
-                if length != 0:
-                    box.append(h)
-            ht = F.hstack(box)
+            # for length in range(1, self.add +1):
+            #     for num in range(len(self.hh[length])):
+            #         if num == 0:
+            #             h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
+            #         else:
+            #             h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
+            #     if length != 0:
+            #         box.append(h)
+            # ht = F.hstack(box)
 
         elif tnorm == "ronri":
             for length in range(1, self.add +1):
@@ -250,6 +255,5 @@ class IE(chainer.Chain):
             ht = F.hstack(box)#htに形をととのえたやつを代入
         else:
             print("tnorm選択して")
-        if self.args.lossf == "mse_sig":
-            return F.sigmoid(self.lt(ht))
+        
         return self.lt(ht)#ここでようやくltの各重みに入力となる値を入れて出力を返す

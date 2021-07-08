@@ -38,7 +38,7 @@ from chainer.optimizer_hooks import WeightDecay
 
 
 def main():
-
+        
         parser = argparse.ArgumentParser()
         parser.add_argument('--data_model', type=str, default='Titanic_train_3pop_df', help='_3_3_pool_1_mnist_2class：CSVの入力ファイル指名')
 

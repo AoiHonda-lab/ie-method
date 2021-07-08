@@ -2,6 +2,11 @@
 /__pycache__
 /imbalanced-learn
 /result
+/bat
+/data
+/file
+/pandas
+/pic
 test.py
 Titanic_data_create.py
 Titanic_predict.py
@@ -11,3 +16,9 @@ Hyperreal.py
 createdata.py
 etc_model_1cross.py
 etc_model_kcross.py
+RNN_test.py
+tttst.py
+
+板橋_修士論文.pdf
+
+板橋_修論_abstract.pdf

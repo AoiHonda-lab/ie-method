@@ -76,14 +76,14 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                 
                 # 初期値の重みを取得
                 # 入力層ー中間層の重みを取得（記録用）
-                if self.args.fmodel == "random" or self.args.fmodel == "init":
+                if self.args.fmodel == "random" or self.args.fmodel == "init" or self.args.pre_shoki == "units":
                     pass
                 else:
                     for o in range(0, len(self.ie_data[0])*2):
                         if o % 2 == 0:
-                            out_pre_w[o].append(inti_model.l[int(o/2+1)].W.data[0][0])
+                            out_pre_w[o].append(inti_model.l[int(o/2)].W.data[0][0])
                         else:
-                            out_pre_w[o].append(inti_model.l[int(o/2+1)].b.data[0])
+                            out_pre_w[o].append(inti_model.l[int(o/2)].b.data[0])
                 
                 # 中間層ー出力層の重みを取得（記録用）
                 if self.args.out == 2:
@@ -216,14 +216,14 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
         
 
         # epochごとに重み確保
-        if self.args.fmodel == "random" or self.args.fmodel == "init":
+        if self.args.fmodel == "random" or self.args.fmodel == "init" or self.args.pre_shoki == "units":
             pass
         else:
             for t in range(0, len(self.ie_data[0])*2):
                 if t % 2 == 0:
-                    out_pre_w[t].append(self.l[int(t/2+1)].W.data[0][0])
+                    out_pre_w[t].append(self.l[int(t/2)].W.data[0][0])
                 else:
-                    out_pre_w[t].append(self.l[int(t/2+1)].b.data[0])
+                    out_pre_w[t].append(self.l[int(t/2)].b.data[0])
 
         if self.args.out == 2:
             for u in range(self.add):            

@@ -18,6 +18,65 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 def combinations_count(n, r):
 	return math.factorial(n) // (math.factorial(n - r) * math.factorial(r))
 
+def rnn_matrix(input_size):
+	matrix = [[]]
+	for i in range(1,input_size*2):
+		if i <= input_size:
+				matrix.append([i])
+		else:
+			Mat = []
+			for j in range(i-input_size+1):
+				Mat.append(j+1)
+			matrix.append(Mat)
+	return matrix
+
+def bi_rnn_matrix(input_size):
+	matrix = [[]]
+	for i in range(1,input_size*2):
+		if i <= input_size:
+				matrix.append([i])
+		else:
+			Mat = []
+			for j in range(i-input_size+1):
+				Mat.append(j+1)
+			matrix.append(Mat)
+			
+			if i != input_size*2-1:
+				Mat = []
+				for j in range(i-input_size+1):
+					Mat = [input_size-j] + Mat
+				matrix.append(Mat)
+	return matrix
+
+def rnn_matrix_tuple(input_size):#tuple型
+	matrix = [()]
+	for i in range(1,input_size*2):
+		if i <= input_size:
+				matrix.append(tuple([i]))
+		else:
+			Mat = []
+			for j in range(i-input_size+1):
+				Mat.append(j+1)
+			matrix.append(tuple(Mat))
+	return matrix
+
+def bi_rnn_matrix_tuple(input_size):#tuple型
+	matrix = [()]
+	for i in range(1,input_size*2):
+		if i <= input_size:
+				matrix.append(tuple([i]))
+		else:
+			Mat = []
+			for j in range(i-input_size+1):
+				Mat.append(j+1)
+			matrix.append(tuple(Mat))
+			if i != input_size*2-1:
+				Mat = []
+				for j in range(i-input_size+1):
+					Mat = [input_size-j] + Mat
+				matrix.append(tuple(Mat))
+	return matrix
+
 def daisu(ie_data_len, add):
 # 代数積を取得
 	items = [i for i in range(1, ie_data_len+1)]
@@ -247,7 +306,7 @@ def display_null_importance(list, number, args):
 	fig.savefig("./result/picture/Null_imp_image/Null_add{}_lepoch{}_{}.png".format(args.add, args.loss_epoch,list[0][number]))
 
 def cross_valid_custum(dataset, k, boot=1):
-	kf = KFold(n_splits = k, shuffle = True)
+	kf = KFold(n_splits = k, shuffle = True, random_state = 0)
 	kf_list = []
 	valuesize = dataset.shape[1]
 	for train_index, test_index in kf.split(dataset):
@@ -272,8 +331,10 @@ def cross_valid_custum(dataset, k, boot=1):
 	return kf_list
 
 def cross_valid_custum_df(dataset, k, boot=1):
-	kf = KFold(n_splits = k, shuffle = True)
+	random_seed = 2
+	kf = KFold(n_splits = k, shuffle = True, random_state = random_seed)
 	kf_list = []
+	
 	
 	for train_index, test_index in kf.split(dataset):
 		train_df = dataset.iloc[train_index]
@@ -281,16 +342,42 @@ def cross_valid_custum_df(dataset, k, boot=1):
 		if boot == 1:
 			data_boot = train_df
 		else:
-			data_boot = pd.concat([train_df[train_df["Y"]==0].sample(n=boot, replace=True),train_df[train_df["Y"]==1].sample(n=boot, replace=True)]).sample(frac=1, random_state=0)
+			data_boot = pd.concat([train_df[train_df["Y"]==0].sample(n=boot, replace=True,random_state = random_seed),train_df[train_df["Y"]==1].sample(n=boot, replace=True, random_state = random_seed)]).sample(frac=1, random_state= random_seed)
 
 		X_train = data_boot.drop("Y", axis=1)
 		y_train = data_boot["Y"]
-		train_chain = chainer.datasets.TupleDataset(X_train.values, y_train.real)
+		train_chain = chainer.datasets.TupleDataset(X_train.values, y_train.values)#real)
 
 		X_test  = test_df.drop("Y", axis=1)
 		y_test  = test_df["Y"]
-		test_chain = chainer.datasets.TupleDataset(X_test.values, y_test.real)
+		test_chain = chainer.datasets.TupleDataset(X_test.values, y_test.values)#.real)
 			
 		kf_list.append((train_chain, test_chain))
 	return kf_list
+
+def mobius_fazy(weight, combination):
+
+	count = 1
+	fazy_list = []
+	for i in combination:
+		num = 0
+		for j in range(count):
+			if  set(combination[j]) <= set(i):
+				num += weight[j]
+		fazy_list.append(num)
+		count += 1
+	return fazy_list
+
+def mobius_fazy_termsdivide(weight, combination):
+
+	count = 0
+	fazy_list = []
+	for i in combination:
+		num = 0
+		for j in range(count):
+			if  set(combination[j]) <= set(i):
+				num += weight[j]
+		fazy_list.append(num/len(i))
+		count += 1
+	return fazy_list
 

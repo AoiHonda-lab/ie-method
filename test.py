@@ -1,8 +1,15 @@
+import seaborn as sns
+import pandas as pd
+from matplotlib import pyplot as plt
+from pylab import rcParams
+
+
+
 # 必要なモジュールをインポート
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import xgboost as xgb
+
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestRegressor
 
@@ -51,10 +58,59 @@ import pylab
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
+import sklearn
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import ClusterCentroids, RandomUnderSampler
+# data = pd.read_csv("./data/sklearn_data/diabesets_normalize_row_hdlunt.csv")
+# colormap = plt.cm.RdYlGn
+# plt.figure(figsize=(7,7))
+# sns.heatmap(data.corr(), 
+#             square=True,cmap=colormap, annot=True, robust = True)
+# plt.savefig('./data/image/soukan_diabetes.png')
+# plt.show()
 
-data = pd.read_csv('./data/sklearn_data/diabesets_normalize_row.csv')
+df= pd.read_csv("./data/kaggle/heart_attack_3.csv")
+
+
+with open("./result/train/pkl/IEmod_77233_nashi_0.001_max_min_1_mse_2_relu_1_adam_0.001_units_breast-cancer_2_monotony_ie_True_0_2_mno1.pkl", "rb") as mod: 
+    model = pickle.load(mod)
+
+x=np.array([1,2,3])
+b=x.reshape(-1,1)# b列ベクトルになる
+# retu = []
+# for i in range(1001):
+#     retu.append(i/1000)
+retu = np.linspace(0,1,1000)
+retu_np = np.array(retu, dtype=np.float32).reshape(-1,1)
+
+for i in range(10):
+    result = chainer.functions.sigmoid(model.fb[i](model.fa[i](retu_np))).array.flatten()
+    plt.plot(retu, result, label="value{}".format(i))
+    plt.show()
+# import matplotlib.pyplot as plt
+# retu = np.linspace(-1,1,1000)
+# retu_np = np.array(retu, dtype=np.float32).reshape(-1,1)
+
+# for i in range(10):
+#     result = mod(retu_np).array.flatten()
+#     plt.plot(retu, result, label="value{}".format(i))
+#     plt.show()
+
+
+
+for i in range(5):
+    data = pd.read_csv('./data/Titanic/Titanic_shaplay/5cross_add{}_Tit.csv'.format(i+2), index_col=0)
+    colormap = plt.cm.RdYlGn
+    plt.figure(figsize=(7,7))
+    #plt.title('Pearson Correlation of Features', y=1.05, size=15)
+    #sns.set(font_scale=2)
+    sns.heatmap(data, 
+                square=True,cmap=colormap, annot=True, robust = True)
+    plt.savefig('./data/image/5cross_add{}_Tit.png'.format(i+2))
+#plt.show()
+# 図の保存と図示
+
+
 
 X_train = data.drop("Y", axis=1)
 y_train = data["Y"]

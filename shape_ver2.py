@@ -1,6 +1,7 @@
 # -*- coding: utf-8; -*-
 import os
 import argparse
+from typing import ItemsView
 import numpy as np
 import random
 import pickle
@@ -23,6 +24,7 @@ import matplotlib.pyplot as plt
 from pylab import rcParams
 import re
 import itertools
+import calc
 # from return_data import load_data
 # from return_data_noise import load_data
 
@@ -48,7 +50,12 @@ def get_shape(w, syugou, omega, args):
         return hh 
 
     # 部分集合取得
-    all_syugou = daisu(omega, args)
+    if args.matrixtype == 2:
+        all_syugou = calc.rnn_matrix_tuple(omega)
+    elif args.matrixtype == 3:
+        all_syugou = calc.bi_rnn_matrix_tuple(omega)
+    else:
+        all_syugou = daisu(omega, args)
     d_mob = dict(zip(all_syugou, mob_fuzy)) #辞書化して各々対応した要素に重みを入れている
     l = list(d_mob) #list化した空集合を含む集合
     shap_sum_i = []
