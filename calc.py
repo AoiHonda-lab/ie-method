@@ -355,29 +355,29 @@ def cross_valid_custum_df(dataset, k, boot=1):
 		kf_list.append((train_chain, test_chain))
 	return kf_list
 
-def mobius_fazy(weight, combination):
+def mobius_fazy(weight, combination, all_comb):
 
-	count = 1
 	fazy_list = []
-	for i in combination:
+	for i in all_comb:
 		num = 0
-		for j in range(count):
-			if  set(combination[j]) <= set(i):
-				num += weight[j]
+		count = 0
+		for j in combination:
+			if  set(j) <= set(i):
+				num += weight[count]
+			count += 1
 		fazy_list.append(num)
-		count += 1
 	return fazy_list
 
-def mobius_fazy_termsdivide(weight, combination):
+def mobius_fazy_termsdivide(weight, combination, all_comb):
 
-	count = 0
 	fazy_list = []
-	for i in combination:
+	for i in all_comb:
 		num = 0
-		for j in range(count):
-			if  set(combination[j]) <= set(i):
-				num += weight[j]
+		count = 0
+		for j in combination:
+			if  set(j) <= set(i):
+				num += weight[count]
+			count += 1
 		fazy_list.append(num/len(i))
-		count += 1
 	return fazy_list
 

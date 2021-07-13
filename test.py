@@ -28,7 +28,7 @@ from sklearn.tree import DecisionTreeRegressor
 # Support Vector Machines
 import pickle 
 import chainer
-import chainer
+import chainer.functions as F
 from chainer.datasets import split_dataset_random, get_cross_validation_datasets_random
 from chainer import iterators, optimizers, serializers, cuda
 from chainer.optimizer_hooks import WeightDecay, Lasso
@@ -72,8 +72,36 @@ from imblearn.under_sampling import ClusterCentroids, RandomUnderSampler
 df= pd.read_csv("./data/kaggle/heart_attack_3.csv")
 
 
-with open("./result/train/pkl/IEmod_77233_nashi_0.001_max_min_1_mse_2_relu_1_adam_0.001_units_breast-cancer_2_monotony_ie_True_0_2_mno1.pkl", "rb") as mod: 
+with open("./result/train/pkl/IEmod_791736_nashi_0.001_max_min_1_mse_2_relu_1_adam_0.001_units_diabesets_normalize_row_hdlunt_monotony_ie_True_0_2_mno1.pkl", "rb") as mod: 
     model = pickle.load(mod)
+
+data_length = 10
+X_list = np.array([])
+day_num = "791736"
+
+for j in range(1000):
+    X_list = np.append(X_list,(1+j)/1000)
+
+X_list = X_list.astype(np.float32)
+
+for i in range(data_length):
+    
+    exec("Y = F.sigmoid(model.fb"+ str(i+1) +"(model.fa"+ str(i+1) +"(np.array([X_list]).T)))")
+
+    # Figureを設定
+    fig = plt.figure()
+
+    # Axesを追加
+    ax = fig.add_subplot(111)
+
+    ax.plot(X_list, Y.array)
+    ax.set_xlabel("X", size = 14, weight = "light")
+    ax.set_ylabel("X'", size = 14, weight = "light")
+    fig.savefig("./data/image/{}_{}".format(day_num, i))
+print()
+
+
+
 
 x=np.array([1,2,3])
 b=x.reshape(-1,1)# b列ベクトルになる

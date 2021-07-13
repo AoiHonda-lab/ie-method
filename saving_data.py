@@ -14,21 +14,21 @@ def saving_ie(summry, args, no = 0):
 	"""
 
 	# 損失関数と正解率をエクセルデータに保存
-	with open('./result/train/value/IE_value_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_0_{}_mno{}.csv'.format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr, args.pre_shoki, args.data_model, args.model, args.not_monotony ,args.train_number, no), 'w') as f:
+	with open('./result/train/value/IE_value_{}_add{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_0_{}_mno{}.csv'.format(args.day, args.add, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.func, args.opt, args.lr, args.pre_shoki, args.data_model, args.model, args.not_monotony ,args.train_number, no), 'w') as f:
 		writer = csv.writer(f, lineterminator='\n', delimiter='\t')
 		writer.writerows(summry[0])
 
 
 	# モデルをpklに保存
 	summry[1].to_cpu()
-	pickle.dump(summry[1], open("./result/train/pkl/IEmod_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.pkl".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.model, args.not_monotony, args.train_number, no), "wb"), -1)
+	pickle.dump(summry[1], open("./result/train/pkl/IEmod_{}_add{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.pkl".format(args.day, args.add, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.model, args.not_monotony, args.train_number, no), "wb"), -1)
 
 
 	# 重みデータをpklに保存
 	w_model = []
 	w_model.append(summry[2])
 	w_model.append(summry[3])
-	pickle.dump(w_model, open("./result/train/ww/w_model/W_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.pkl".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), "wb"), -1)
+	pickle.dump(w_model, open("./result/train/ww/w_model/W_{}_add{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.pkl".format(args.day, args.add, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), "wb"), -1)
 	
 	
 	# 全重みをエクセルデータに保存
@@ -43,10 +43,10 @@ def saving_ie(summry, args, no = 0):
 	# 	writer = csv.writer(f, lineterminator='\n', delimiter='\t')
 	# 	writer.writerows(out_w)
 
-	np.savetxt("./result/train/ww/w_ww/W_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.csv".format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), out_w,fmt='%.4f',delimiter=',')
+	np.savetxt("./result/train/ww/w_ww/W_{}_add{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_{}_0_{}_mno{}.csv".format(args.day, args.add, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.func, args.opt, args.lr ,args.pre_shoki, args.data_model, args.not_monotony, args.train_number, no), out_w,fmt='%.4f',delimiter=',')
 
 	# シャプレイ値保存
-	np.savetxt('./result/train/shape/shaplay_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_0_{}_mno{}.csv'.format(args.day, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.add, args.func, args.opt, args.lr, args.pre_shoki, args.data_model, args.model, args.not_monotony ,args.train_number, no), np.array(summry[4]) ,fmt='%.4f',delimiter=',')
+	np.savetxt('./result/train/shape/shaplay_{}_add{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_monotony_{}_0_{}_mno{}.csv'.format(args.day, args.add, args.norm, args.l_lr, args.shoki_opt, args.out, args.lossf, args.func, args.opt, args.lr, args.pre_shoki, args.data_model, args.model, args.not_monotony ,args.train_number, no), np.array(summry[4]) ,fmt='%.4f',delimiter=',')
 	# np.savetxt("shape_{}.csv".format(filename), shape_box ,fmt='%.4f',delimiter=',')
 
 

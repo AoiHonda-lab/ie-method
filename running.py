@@ -199,7 +199,7 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
             ww_shape.append(out_post_w[ss][-1])
 
         # print(ww_shape)
-        shape = shape_ver2.get_shape(ww_shape, args.add, len(self.ie_data[0]), args)
+        shape = shape_ver2.get_shape(ww_shape, len(self.ie_data[0]), args)
         shape_box.append(shape)
         # print()
 

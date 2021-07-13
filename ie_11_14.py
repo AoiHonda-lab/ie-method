@@ -199,25 +199,25 @@ class IE(chainer.Chain):
             #     box.append(F.prod(H_np[i,:]*self.t_box+self.t_unt_box, axis=1))
             # ht = F.vstack(box)
 
-            #べき集合の行列を作成v3
-            for i, j in zip(self.hh, range(self.add+1)):
-                if i == []:
-                    pass
-                else:
-                    for l in i:
-                        t_box[j-1,l-1] = H_np[:,l-1].array
-            ht = F.prod(t_box.astype("float32"), axis=1).T 
+            #べき集合の行列を作成v3 #重み更新されない問題が発生中
+            # for i, j in zip(self.hh, range(self.add+1)):
+            #     if i == []:
+            #         pass
+            #     else:
+            #         for l in i:
+            #             t_box[j-1,l-1] = H_np[:,l-1].array
+            # ht = F.prod(t_box.astype("float32"), axis=1).T 
 
             # v1
-            # for length in range(1, self.add +1):
-            #     for num in range(len(self.hh[length])):
-            #         if num == 0:
-            #             h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
-            #         else:
-            #             h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
-            #     if length != 0:
-            #         box.append(h)
-            # ht = F.hstack(box)
+            for length in range(1, self.add +1):
+                for num in range(len(self.hh[length])):
+                    if num == 0:
+                        h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
+                    else:
+                        h *= H[self.hh[length][num]-1]#今までの計算結果にtnormでさらに加えて演算する　例h1*h2のとき　h=h1して次にここで h *= h2としてh がh1*h2となるようにする。
+                if length != 0:
+                    box.append(h)
+            ht = F.hstack(box)
 
         elif tnorm == "ronri":
             for length in range(1, self.add +1):

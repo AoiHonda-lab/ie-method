@@ -45,7 +45,7 @@ def main():
 	fuzy_list = []
 	fuzy_list_termdivid = []
 	# よく変更するパラメータ
-	parser.add_argument('--epoch', type=int, default=10000, help='epoch for each generation')
+	parser.add_argument('--epoch', type=int, default=4, help='epoch for each generation')
 	parser.add_argument('--loss_loop', type=float, default=0.25, help='learning rate')
 	parser.add_argument('--matrixtype', type=int, default=1, help='2,3以外はいつも通り、２はRNNみたいな配列,3はbidirectionを意識した配列')
 	parser.add_argument('--mlp_units', type=int, default=1000, help='mlpの中間層のユニット数')
@@ -123,6 +123,7 @@ def main():
 	# dataset = data_s.values
 	
 	valuesize = data.shape[1]
+
 	#Y = (dataset[1:dataset.shape[0], 0]).astype(np.int32)
 	if args.k == 1 and args.boot != 1:
 		data_boot = pd.concat([data[data["Y"]==0].sample(n=args.boot, replace=True, random_state=0),data[data["Y"]==1].sample(n=args.boot, replace=True, random_state=0)]).sample(frac=1, random_state=0)
@@ -147,6 +148,7 @@ def main():
 		pass
 	
 	null_importance = []
+	all_combination = calc.daisu(X1.shape[1], X1.shape[1])[1:]
 
 	for rnum in range(args.null_impcount):
 
@@ -319,8 +321,8 @@ def main():
 				if summary[5] == args.epoch:
 					summary[5] -= 1
 				shape_list.append(summary[4][summary[5]])
-				fuzy_list.append(calc.mobius_fazy(model.lt.W.array[0].tolist(),model.hh[1:]))
-				fuzy_list_termdivid.append(calc.mobius_fazy(model.lt.W.array[0].tolist(),model.hh[1:]))
+				fuzy_list.append(calc.mobius_fazy(model.lt.W.array[0].tolist(),model.hh[1:], all_combination))
+				fuzy_list_termdivid.append(calc.mobius_fazy_termsdivide(model.lt.W.array[0].tolist(),model.hh[1:], all_combination))
 
 			# saving result data
 			if args.save_data == "save":
