@@ -25,20 +25,41 @@ from itertools import chain,combinations
 
 #包除積分で使用するIEネットワークのクラス
 class IE(chainer.Chain):
-    def __init__(self, args, train, cov):#ネットワークの骨組み（エッジとかノードとか）をきめてエッジの初期値を設定するとこ
+    def __init__(self, args, train_data, cov, apdel_list = []):#ネットワークの骨組み（エッジとかノードとか）をきめてエッジの初期値を設定するとこ
         super(IE, self).__init__()
         self.args = args
-        self.ie_data = train._datasets[0]
+        self.ie_data = train_data
         self.dtype = np.float32
 
-        # 代数積を取得
+        # 演算を行う組み合わせをリストとして取得、self.hhはリスト、self.addはリストの長さ
         if args.matrixtype == 2:
             self.hh = calc.rnn_matrix(len(self.ie_data[0]))
             self.add = len(self.ie_data[0])*2-1
         elif args.matrixtype == 3:
             self.hh = calc.bi_rnn_matrix(len(self.ie_data[0]))
             self.add = len(self.ie_data[0])*3-3
-        else:
+        elif args.matrixtype == 4:
+            self.hh = calc.daisu_custum(len(self.ie_data[0]), apdel_list, args.add)
+            # 集合を作成し取得
+            self.add = calc.add(self.args.add, len(self.ie_data[0]))
+        elif args.matrixtype == 5:
+            self.hh = calc.daisu_custum_2(len(self.ie_data[0]), apdel_list)
+            # 集合を作成し取得
+            self.add = len(self.hh)-1
+        elif args.matrixtype == 6:
+            self.hh = [[],[1],[2],[3],[4],[5],[6],[7],[8],[9],[10],[1,2],[1,4],[1,7],[1,8],[1,9],[1,10],[2,3],[2,4],[2,7],[2,9],[2,10],[4,6],[4,10],[5,6],[5,8],[6,9],[7,8],
+            [1,2,7],[1,2,8],[1,2,10],[1,3,5],[1,4,10],[1,5,10],[1,7,8],[1,7,10],[2,3,6],[2,3,10],[2,4,10],[2,7,8],[2,7,9],[2,7,10],[3,5,7],[3,5,8],[3,5,9],[3,7,10],
+            [4,5,6],[4,5,10],[4,6,7],[4,6,8],[4,7,10],[5,6,8],[5,6,9],[6,7,8],[6,7,9],[6,8,9],[1,2,4,8],[1,2,5,10],[1,2,6,10],[1,2,8,9],[1,3,5,6],[1,3,5,7],[1,3,5,8],
+            [1,3,5,9],[1,3,6,9],[1,4,6,9],[1,4,7,8],[1,4,7,10],[1,4,9,10],[1,5,7,10],[2,3,4,6],[2,3,5,6],[2,3,5,7],[2,3,5,9],[2,3,6,9],[2,4,5,9],[2,4,6,8],[2,4,6,10],
+            [2,6,7,8],[3,4,5,8],[3,4,8,9],[3,5,6,8],[3,6,7,9],[3,6,8,9],[4,5,7,9],[4,6,7,8],[5,6,8,9],[6,7,8,9],[1,2,3,6,9],[1,2,3,7,8],[1,2,4,5,10],[1,2,4,6,10],[1,3,4,5,6],
+            [1,3,4,8,9],[1,3,5,6,7],[1,3,5,6,8],[1,3,5,6,9],[1,3,7,8,10],[1,3,8,9,10],[1,4,5,9,10],[1,4,6,7,9],[1,4,6,9,10],[1,4,7,8,9],[1,7,8,9,10],[2,3,4,5,6],[2,3,5,6,7],
+            [2,3,5,6,8],[2,3,5,6,9],[2,4,5,7,9],[2,4,6,7,8],[3,4,5,6,8],[3,4,6,7,8],[3,5,6,7,8],[1,2,3,4,6,7],[1,2,3,5,6,7],[1,2,3,5,6,8],[1,2,3,5,6,9],[1,2,4,6,7,9],
+            [1,2,4,6,7,10],[1,2,4,6,8,10],[1,3,4,5,6,9],[1,3,4,5,7,9],[1,3,4,5,8,10],[1,3,4,8,9,10],[1,4,5,6,9,10],[1,4,6,8,9,10],[2,3,5,6,7,8],[3,4,5,6,8,9],[3,5,6,7,8,9],
+            [1,2,3,4,5,6,10],[1,2,3,4,5,8,10],[1,2,3,6,8,9,10],[1,2,4,5,7,8,10],[1,2,4,5,8,9,10],[1,3,4,5,6,7,10],[1,2,3,4,5,6,7,10],[1,2,3,4,5,6,8,10],[1,2,4,5,6,8,9,10],
+            [1,3,4,5,6,7,9,10],[1,2,3,4,5,6,7,8,10]]
+
+            self.add = len(self.hh)-1
+        else:#一般的に使うメビウス型包除積分モデルのリストと長さ
             self.hh = calc.daisu(len(self.ie_data[0]), args.add)
             # 集合を作成し取得
             self.add = calc.add(self.args.add, len(self.ie_data[0]))   
@@ -57,7 +78,7 @@ class IE(chainer.Chain):
             if self.args.fmodel == "on":
                 pass
             else:
-                if args.shoki_opt == "max_min":#データの各変数の最大値、最小値を取得するところ
+                if args.shoki_opt == "max_min":#データの各変数の最大値、最小値を取得するところ（初期値のために取得する）
                     if self.args.gpu_id >= 0:
                         # max_data = cp.max(cp.array(ie_data), axis = 0)
                         # min_data = cp.min(cp.array(ie_data), axis = 0)
@@ -98,8 +119,8 @@ class IE(chainer.Chain):
                     for num in range(len(self.ie_data[0])):
                         # 相関係数による判別
                         if cov[num] > 0:
-                            a.append(6 / (max_data[num] - min_data[num]))
-                            b.append(-6* (min_data[num] + max_data[num]) / (2 * (max_data[num] - min_data[num])))
+                            a.append(6 / (max_data[num] - min_data[num]))                                         # 初期値の計算式（前処理の重み）
+                            b.append(-6* (min_data[num] + max_data[num]) / (2 * (max_data[num] - min_data[num]))) # 初期値の計算式 (前処理のバイアス)
                         else:
                             a.append(-6 / (max_data[num] - min_data[num]))
                             b.append(6* (min_data[num] + max_data[num]) / (2 * (max_data[num] - min_data[num])))
@@ -144,25 +165,25 @@ class IE(chainer.Chain):
                 self.fa = []
                 self.fb = []
                 for num in range(len(self.ie_data[0])):
-                    exec("self.fa" + str(num + 1) + "= L.Linear(1, 500)")
-                    exec("self.fb" + str(num + 1) + "= L.Linear(500, 1)")
+                    exec("self.fa" + str(num + 1) + "= L.Linear(1, 32)")
+                    exec("self.fb" + str(num + 1) + "= L.Linear(32, 1)")
                     exec("self.fa.append(self.fa" + str(num + 1) + ")")  
                     exec("self.fb.append(self.fb" + str(num + 1) + ")")
         else:
             print('error:前準備部分でpre_shokiの設定ミス')
 
         #べき集合の行列を作成
-        for i, j in zip(self.hh, range(self.add+1)):
-            if i == []:
-                pass
-            else:
-                for l in i:
-                    self.t_box[j-1,l-1] = 1
-        self.t_unt_box = self.t_unt_box - self.t_box
+        # for i, j in zip(self.hh, range(self.add+1)):
+        #     if i == []:
+        #         pass
+        #     else:
+        #         for l in i:
+        #             self.t_box[j-1,l-1] = 1
+        # self.t_unt_box = self.t_unt_box - self.t_box
 
         with self.init_scope():
             # 中間層ー出力層の初期値取得
-            siki = calc.siki(self.add, len(self.ie_data[0]))
+            siki = calc.siki(len(self.hh)-1, len(self.ie_data[0]))
             # 初期値確保
             m = initializers.Constant(np.array(siki).T)
             m0 = initializers.Constant(np.array([0]))
@@ -172,7 +193,7 @@ class IE(chainer.Chain):
                 ramda_init = initializers.Constant(np.full((1, self.add - len(self.ie_data[0])), 0.5))
                 self.ramda = L.Linear(self.add - len(self.ie_data[0]), 1, initialW=ramda_init, nobias=True)
 
-            self.lt = L.Linear(self.add, args.out, initialW=m, initial_bias=m0)
+            self.lt = L.Linear(len(self.hh)-1, args.out, initialW=m, initial_bias=m0)
             if self.args.gpu_id >= 0:
                     self.lt.to_gpu(self.args.gpu_id)
 
@@ -194,7 +215,7 @@ class IE(chainer.Chain):
         H_np = F.hstack(H)
         box = [] #各包除積分ネットワークの入力の値2^n-1を入れる入れ物
         if tnorm == "daisu":#tnormの選択と計算を行う。ここでnumpyのforroopを2重にしてるから遅くなっていると思われる。
-            # v2
+            # t-norm演算パターン２
             # for i in range(H[0].shape[0]):
             #     box.append(F.prod(H_np[i,:]*self.t_box+self.t_unt_box, axis=1))
             # ht = F.vstack(box)
@@ -208,8 +229,8 @@ class IE(chainer.Chain):
             #             t_box[j-1,l-1] = H_np[:,l-1].array
             # ht = F.prod(t_box.astype("float32"), axis=1).T 
 
-            # v1
-            for length in range(1, self.add +1):
+            # t-norm演算パターン１
+            for length in range(1, len(self.hh)):
                 for num in range(len(self.hh[length])):
                     if num == 0:
                         h = H[self.hh[length][num]-1]#最初にhに入れる変数をhにいれる。例h = h1
@@ -219,7 +240,7 @@ class IE(chainer.Chain):
                     box.append(h)
             ht = F.hstack(box)
 
-        elif tnorm == "ronri":
+        elif tnorm == "ronri":#論理積の計算を行う場合の処理
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
@@ -232,7 +253,7 @@ class IE(chainer.Chain):
                     h = Variable(np.array([np.amin(h,axis=1)]).T)#連結しておいた値を行ごとにminをとってバッチサイズ行1列の形にする
                     box.append(h)#各バッチサイズで最も小さい値をboxにいれる
             ht = F.hstack(box)#htに形をととのえたやつを代入
-        elif tnorm == "dombi":#調整中
+        elif tnorm == "dombi":#調整中　dombiの計算を行う場合の処理
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:
@@ -243,7 +264,7 @@ class IE(chainer.Chain):
                 if length != 0:
                     box.append(h)
             ht = F.hstack(box)#htに形をととのえたやつを代入
-        elif tnorm == "duboa":
+        elif tnorm == "duboa": #duboa-prade積の計算を行う場合の処理
             for length in range(1, self.add +1):
                 for num in range(len(self.hh[length])):
                     if num == 0:

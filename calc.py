@@ -28,6 +28,8 @@ def rnn_matrix(input_size):
 			for j in range(i-input_size+1):
 				Mat.append(j+1)
 			matrix.append(Mat)
+	
+	matrix.pop(-2)
 	return matrix
 
 def bi_rnn_matrix(input_size):
@@ -58,6 +60,8 @@ def rnn_matrix_tuple(input_size):#tuple型
 			for j in range(i-input_size+1):
 				Mat.append(j+1)
 			matrix.append(tuple(Mat))
+	
+	matrix.pop(-2)
 	return matrix
 
 def bi_rnn_matrix_tuple(input_size):#tuple型
@@ -77,6 +81,12 @@ def bi_rnn_matrix_tuple(input_size):#tuple型
 				matrix.append(tuple(Mat))
 	return matrix
 
+def linear(ie_data_len):
+	hh = [[]]
+	for i in range(ie_data_len): hh.append([i+1])
+	return hh
+
+
 def daisu(ie_data_len, add):
 # 代数積を取得
 	items = [i for i in range(1, ie_data_len+1)]
@@ -87,6 +97,33 @@ def daisu(ie_data_len, add):
 		for c in combinations(items, i):
 			subsets.append(list(c))
 	hh = subsets
+	return hh 
+
+def daisu_custum(ie_data_len, null_list, add):
+# 代数積を取得
+	items = [i for i in range(1, ie_data_len+1)]
+	subsets=[]
+	for i in range(len(items) + 1):
+		if i > add:#二加法的まで
+			break
+		for c in combinations(items, i):
+			subsets.append(list(c))
+	hh = subsets
+	for i in null_list:
+		if i == 0:
+			pass
+		else:
+			hh.remove(i)
+	return hh 
+
+def daisu_custum_2(ie_data_len, append_list):
+# 代数積を取得
+	hh = linear(ie_data_len)
+	for i in append_list:
+		if i == 0:
+			pass
+		else:
+			hh.append(i)
 	return hh 
 
 def add(arg_add, ie_data_len):

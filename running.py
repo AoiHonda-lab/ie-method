@@ -39,11 +39,11 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
     # 変数分の重み箱作成（記録用）
     for i in range(len(self.ie_data[0])*2):
         out_pre_w.append([])
-    for i in range(self.add+1):
+    for i in range(len(self.hh)):
         out_post_w.append([])
 
     if self.args.out == 2:
-        for i in range(self.add):
+        for i in range(len(self.hh)-1):
             out_post_w[i].append([])
             out_post_w[i].append([])
 
@@ -87,13 +87,13 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                 
                 # 中間層ー出力層の重みを取得（記録用）
                 if self.args.out == 2:
-                    for p in range(self.add):            
+                    for p in range(len(self.hh)-1):            
                         out_post_w[p][0].append(inti_model.lt.W.data[0][p])
                         out_post_w[p][1].append(inti_model.lt.W.data[1][p])
                 else:
-                    for q in range(self.add):            
+                    for q in range(len(self.hh)-1):            
                         out_post_w[q].append(inti_model.lt.W.data[0][q])
-                    out_post_w[self.add].append(inti_model.lt.b.data[0])
+                    out_post_w[len(self.hh)-1].append(inti_model.lt.b.data[0])
 
             # 損失関数の定義
             # 出力２のとき
@@ -199,7 +199,10 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
             ww_shape.append(out_post_w[ss][-1])
 
         # print(ww_shape)
-        shape = shape_ver2.get_shape(ww_shape, len(self.ie_data[0]), args)
+        if args.matrixtype == 6:
+            shape = shape_ver2.get_shape_2(ww_shape, self.hh)
+        else:
+            shape = shape_ver2.get_shape(ww_shape, len(self.ie_data[0]), args)
         shape_box.append(shape)
         # print()
 
@@ -226,13 +229,13 @@ def run(self, train_iter, test_iter, optimizer, elapsed_time, start, args):
                     out_pre_w[t].append(self.l[int(t/2)].b.data[0])
 
         if self.args.out == 2:
-            for u in range(self.add):            
+            for u in range(len(self.hh)-1):            
                 out_post_w[u][0].append(self.lt.W.data[0][u])
                 out_post_w[u][1].append(self.lt.W.data[1][u])
         else:
-            for w in range(self.add):
+            for w in range(len(self.hh)-1):
                 out_post_w[w].append(self.lt.W.data[0][w])
-            out_post_w[self.add].append(self.lt.b.data[0])
+            out_post_w[len(self.hh)-1].append(self.lt.b.data[0])
 
         #過学習する前に止める
         if test_loss_point > float(to_cpu(loss.data)):

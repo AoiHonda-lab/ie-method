@@ -45,9 +45,9 @@ def main():
 	fuzy_list = []
 	fuzy_list_termdivid = []
 	# よく変更するパラメータ
-	parser.add_argument('--epoch', type=int, default=4, help='epoch for each generation')
-	parser.add_argument('--loss_loop', type=float, default=0.25, help='learning rate')
-	parser.add_argument('--matrixtype', type=int, default=1, help='2,3以外はいつも通り、２はRNNみたいな配列,3はbidirectionを意識した配列')
+	parser.add_argument('--epoch', type=int, default=10000, help='epoch for each generation')
+	parser.add_argument('--loss_loop', type=float, default=1, help='learning rate')
+	parser.add_argument('--matrixtype', type=int, default=2, help='2,3以外はいつも通り、２はRNNみたいな配列,3はbidirectionを意識した配列')
 	parser.add_argument('--mlp_units', type=int, default=1000, help='mlpの中間層のユニット数')
 	parser.add_argument('--subepoch', type=int, default=2000, help='前の学習をさせたかった')
 	parser.add_argument('--loss_epoch', type=int, default=20, help='テストデータに対する減少傾向が確認されてからの打ち切りまでの学習回数')
@@ -64,7 +64,7 @@ def main():
 	parser.add_argument('--pre_ie', type=str, default='pre', help='premlp or precor')
 	parser.add_argument('--permuimp', type=str, default='off', help='premlp or precor')
 	parser.add_argument('--boot', type=int, default=1, help='ブートストラップ法で目的変数のデータ数を合わせる。その時の抽出するデータ数。1ならただの交差検証。目的変数の形は正の整数0~')
-	parser.add_argument('--pre_shoki', type=str,default='units',help='soukan:相関から初期値を決める,random:初期値をランダムに決める,units:適当なユニット数で学習')
+	parser.add_argument('--pre_shoki', type=str,default='soukan',help='soukan:相関から初期値を決める,random:初期値をランダムに決める,units:適当なユニット数で学習')
 
 	#初期値手動で変えるとき使用
 	parser.add_argument('--initi',type=str, default='off', help='on or off')
@@ -148,7 +148,6 @@ def main():
 		pass
 	
 	null_importance = []
-	all_combination = calc.daisu(X1.shape[1], X1.shape[1])[1:]
 
 	for rnum in range(args.null_impcount):
 
@@ -166,9 +165,17 @@ def main():
 		if args.k == 1 and args.train_rate == 1 :#交差なし、全データで学習
 			train = X
 			test  = X
+			train_x = train._dataset[train._order[train._start:train._start+train._size].tolist()][0]
+			train_y = train._dataset[train._order[train._start:train._start+train._size].tolist()][1]
+			test_x  = test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+			test_y  = test._dataset[test._order[test._start:test._start+test._size].tolist()][1]
 		elif args.k == 1:#交差なし、学習比率調整
 			trainsize = int(X._length*args.train_rate)
-			train, test = split_dataset_random(X, trainsize)
+			train, test = split_dataset_random(X, trainsize, seed = 0)
+			train_x = train._dataset[train._order[train._start:train._start+train._size].tolist()][0]
+			train_y = train._dataset[train._order[train._start:train._start+train._size].tolist()][1]
+			test_x  = test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+			test_y  = test._dataset[test._order[test._start:test._start+test._size].tolist()][1]
 		elif rnum == 0:#ｋ分割交差かブートストラップ法によるデータ分割
 			X1_df = pd.DataFrame(X1)
 			X1_df.columns = data.drop("Y", axis=1).columns
@@ -176,9 +183,13 @@ def main():
 			Y_df.columns = ["Y"]
 			X = pd.concat([X1_df, Y_df], axis=1)
 			cross_dataset = calc.cross_valid_custum_df(X, args.k + args.k_test, args.boot)
-		elif rnum != 0:#交差あり、null_impourtance計算する
+		elif rnum != 0:#交差あり、null_importance計算する
 			trainsize = int(X._length*(1-1/args.k))
 			train, test = split_dataset_random(X, trainsize)
+			train_x = train._dataset[train._order[train._start:train._start+train._size].tolist()][0]
+			train_y = train._dataset[train._order[train._start:train._start+train._size].tolist()][1]
+			test_x  = test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+			test_y  = test._dataset[test._order[test._start:test._start+test._size].tolist()][1]
 		else:
 			print("データ準備エラー")
 
@@ -195,10 +206,14 @@ def main():
 			loss_loop = 1000
 			loss_train_loop = 1000
 			print("===== start train =====", flush=True)#ここから学習開始
-			print("number : 0 _ " + str(args.train_number-1+1) + "")
+			print("number : 0 _ " + str(args.train_number) + "")
 
 			if args.k > 1 and rnum == 0:
 				train, test = cross_dataset[i]
+				train_x = train._datasets[0]
+				train_y = train._datasets[1]
+				test_x  = test._datasets[0]
+				test_y  = test._datasets[1]
 			else:
 				pass
 
@@ -217,8 +232,24 @@ def main():
 			else: 
 				train_iter = iterators.SerialIterator(train[1:500], args.batch_size, shuffle=None)
 				test_iter = iterators.SerialIterator(test[1:500], len(test))
-			loop_or_not = 0
-			while 	args.loss_loop < loss_loop or args.loss_loop < loss_train_loop: # loss_loopを超えたときだけループを外れる。pre_shokiのunitsに対応するため
+			#loop_or_not = 0
+
+			# 追加するリストを作成
+			apdel_list = calc.daisu(valuesize-1, args.add)
+			for apdel in range(valuesize): apdel_list.pop(0)
+			apdel_list.insert(0, 0) #[0, [1], [2], [3], ...]
+			apdel_search = []       #最終的に追加するリスト
+			apdel_point  = 9999999
+			all_combination = calc.daisu(valuesize-1, valuesize-1)
+			all_combination.pop(0)
+
+			#while 	args.loss_loop < loss_loop or args.loss_loop < loss_train_loop: # loss_loopを超えたときだけループを外れる。pre_shokiのunitsに対応するため
+			# for apdel_data in apdel_list:
+			for apdel_data in range(1):
+				append_list = [] #今回追加するリスト
+				print("apdel_data is {}----------------------------------------------------------------------------------------".format(apdel_data))
+				for ap in apdel_search: append_list.append(ap)
+				append_list.append(apdel_data) 
 				# define alg　更新式の選択
 				optimizer = chainer.optimizers
 				define_opt = args.opt
@@ -244,7 +275,7 @@ def main():
 					elif args.pre_shoki != "units":
 						submodel = submlp.subMLP(args)
 						optimizer.setup(submodel)
-					model = ie_11_14.IE(args, train, cov)
+					model = ie_11_14.IE(args, train_x, cov, append_list)
 					
 				optimizer.setup(model)
 				# for num in range(len(ie_data[0])):
@@ -287,18 +318,23 @@ def main():
 				if args.out == 1:
 					if args.acc_info == 'on':
 						try:
-							score_train, precision_train, recall_train, f1_train, AUC_train = calc.accuracy(train._datasets[1],model(train._datasets[0]).array)
-							score_test, precision_test, recall_test, f1_test, AUC_test = calc.accuracy(test._datasets[1],model(test._datasets[0]).array)
+							score_train, precision_train, recall_train, f1_train, AUC_train = calc.accuracy(train_y,model(train_x).array)
+							score_test, precision_test, recall_test, f1_test, AUC_test = calc.accuracy(test_y,model(test_x).array)
 						except AttributeError:
-							score, precision, recall, f1, AUC = calc.accuracy(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],model(test._dataset[test._order[test._start:test._start+test._size].tolist()][0],args.tnorm).array)
+							score, precision, recall, f1, AUC = calc.accuracy(test_y,model(test_x,args.tnorm).array)
 					else:
 						pass
 				else:
 					pass
-				loss_loop = summary[0][len(summary[0])-2][2]
-				loss_train_loop = summary[0][len(summary[0])-2][1]
-				print("Loop_count____________________________________________________:{}".format(loop_or_not))
-				loop_or_not += 1
+				
+				if apdel_point > summary[0][len(summary[0])-2][2]: 
+					apdel_point = summary[0][len(summary[0])-2][2]
+					apdel_search.append(apdel_data)
+
+				# loss_loop = summary[0][len(summary[0])-2][2]
+				# loss_train_loop = summary[0][len(summary[0])-2][1]
+				# print("Loop_count____________________________________________________:{}".format(loop_or_not))
+				# loop_or_not += 1
 			
 			#k分割の精度の合計を作る
 			if args.acc_info == 'on':
@@ -396,14 +432,14 @@ def main():
 				mon = 0
 				for mod in model_list:
 					train, test = cross_dataset[mon]
-					train_r2_sum += calc.calc_r2(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					train_ak_sum += calc.calc_ak_mse(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf, valuesize)
-					train_mae_sum += calc.calc_mae(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					train_mse_sum += calc.calc_mse(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					test_r2_sum += calc.calc_r2(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
-					test_ak_sum += calc.calc_ak_mse(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf, valuesize)
-					test_mae_sum += calc.calc_mae(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
-					test_mse_sum += calc.calc_mse(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
+					train_r2_sum += calc.calc_r2(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					train_ak_sum += calc.calc_ak_mse(train_y,mod(train_x, args.tnorm).array, args.lossf, valuesize)
+					train_mae_sum += calc.calc_mae(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					train_mse_sum += calc.calc_mse(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					test_r2_sum += calc.calc_r2(test_y,mod(test_x, args.tnorm).array, args.lossf)
+					test_ak_sum += calc.calc_ak_mse(test_y,mod(test_x, args.tnorm).array, args.lossf, valuesize)
+					test_mae_sum += calc.calc_mae(test_y,mod(test_x, args.tnorm).array, args.lossf)
+					test_mse_sum += calc.calc_mse(test_y,mod(test_x, args.tnorm).array, args.lossf)
 						# train, test = cross_dataset[mon]
 						# test_r2_sum += calc.calc_r2(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],mod(test._dataset[test._order[test._start:test._start+test._size].tolist()][0], args.tnorm).array)
 						# test_ak_sum += calc.calc_ak_mse(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],mod(test._dataset[test._order[test._start:test._start+test._size].tolist()][0], args.tnorm).array, valuesize)
@@ -414,14 +450,14 @@ def main():
 			# 		test_ak_sum += calc.calc_ak_mse(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf, valuesize)
 			else:
 				for mod in model_list:
-					train_r2_sum += calc.calc_r2(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					train_ak_sum += calc.calc_ak_mse(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf, valuesize)
-					train_mae_sum += calc.calc_mae(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					train_mse_sum += calc.calc_mse(train._datasets[1],mod(train._datasets[0], args.tnorm).array, args.lossf)
-					test_r2_sum += calc.calc_r2(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
-					test_ak_sum += calc.calc_ak_mse(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf, valuesize)
-					test_mae_sum += calc.calc_mae(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
-					test_mse_sum += calc.calc_mse(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
+					train_r2_sum += calc.calc_r2(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					train_ak_sum += calc.calc_ak_mse(train_y,mod(train_x, args.tnorm).array, args.lossf, valuesize)
+					train_mae_sum += calc.calc_mae(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					train_mse_sum += calc.calc_mse(train_y,mod(train_x, args.tnorm).array, args.lossf)
+					test_r2_sum += calc.calc_r2(test_y,mod(test_x, args.tnorm).array, args.lossf)
+					test_ak_sum += calc.calc_ak_mse(test_y,mod(test_x, args.tnorm).array, args.lossf, valuesize)
+					test_mae_sum += calc.calc_mae(test_y,mod(test_x, args.tnorm).array, args.lossf)
+					test_mse_sum += calc.calc_mse(test_y,mod(test_x, args.tnorm).array, args.lossf)
 					# mod_r2_sum += calc.calc_r2(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],mod(test._dataset[test._order[test._start:test._start+test._size].tolist()][0], args.tnorm).array)
 					# mod_ak_sum += calc.calc_ak_mse(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],mod(test._dataset[test._order[test._start:test._start+test._size].tolist()][0], args.tnorm).array, valuesize)
 			train_r2 = train_r2_sum/len(model_list)
@@ -447,14 +483,14 @@ def main():
 				mon = 0
 				for mod in model_list:
 					train, test = cross_dataset[mon]
-					train_r2_sum += calc.calc_r2(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					train_ak_sum += calc.calc_ak_mse(train._datasets[1],mod(train._datasets[0]).array, args.lossf, valuesize)
-					train_mae_sum += calc.calc_mae(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					train_mse_sum += calc.calc_mse(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					test_r2_sum += calc.calc_r2(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
-					test_ak_sum += calc.calc_ak_mse(test._datasets[1],mod(test._datasets[0]).array, args.lossf, valuesize)
-					test_mae_sum += calc.calc_mae(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
-					test_mse_sum += calc.calc_mse(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
+					train_r2_sum += calc.calc_r2(train_y,mod(train_x).array, args.lossf)
+					train_ak_sum += calc.calc_ak_mse(train_y,mod(train_x).array, args.lossf, valuesize)
+					train_mae_sum += calc.calc_mae(train_y,mod(train_x).array, args.lossf)
+					train_mse_sum += calc.calc_mse(train_y,mod(train_x).array, args.lossf)
+					test_r2_sum += calc.calc_r2(test_y,mod(test_x).array, args.lossf)
+					test_ak_sum += calc.calc_ak_mse(test_y,mod(test_x).array, args.lossf, valuesize)
+					test_mae_sum += calc.calc_mae(test_y,mod(test_x).array, args.lossf)
+					test_mse_sum += calc.calc_mse(test_y,mod(test_x).array, args.lossf)
 					mon += 1
 			#elif args.train_rate == 1:
 				# test_r2_sum += calc.calc_r2(test._datasets[1],mod(test._datasets[0], args.tnorm).array, args.lossf)
@@ -462,14 +498,14 @@ def main():
 				#print(calc.print_r2(test._datasets[1],model(test._datasets[0]).array, args.lossf))
 			else:
 				for mod in model_list:
-					train_r2_sum += calc.calc_r2(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					train_ak_sum += calc.calc_ak_mse(train._datasets[1],mod(train._datasets[0]).array, args.lossf, valuesize)
-					train_mae_sum += calc.calc_mae(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					train_mse_sum += calc.calc_mse(train._datasets[1],mod(train._datasets[0]).array, args.lossf)
-					test_r2_sum += calc.calc_r2(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
-					test_ak_sum += calc.calc_ak_mse(test._datasets[1],mod(test._datasets[0]).array, args.lossf, valuesize)
-					test_mae_sum += calc.calc_mae(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
-					test_mse_sum += calc.calc_mse(test._datasets[1],mod(test._datasets[0]).array, args.lossf)
+					train_r2_sum += calc.calc_r2(train_y,mod(train_x).array, args.lossf)
+					train_ak_sum += calc.calc_ak_mse(train_y,mod(train_x).array, args.lossf, valuesize)
+					train_mae_sum += calc.calc_mae(train_y,mod(train_x).array, args.lossf)
+					train_mse_sum += calc.calc_mse(train_y,mod(train_x).array, args.lossf)
+					test_r2_sum += calc.calc_r2(test_y,mod(test_x).array, args.lossf)
+					test_ak_sum += calc.calc_ak_mse(test_y,mod(test_x).array, args.lossf, valuesize)
+					test_mae_sum += calc.calc_mae(test_y,mod(test_x).array, args.lossf)
+					test_mse_sum += calc.calc_mse(test_y,mod(test_x).array, args.lossf)
 				# npの形で入れるためこんな長くなってる
 				#print(calc.print_r2(test._dataset[test._order[test._start:test._start+test._size].tolist()][1],model(test._dataset[test._order[test._start:test._start+test._size].tolist()][0]).array, args.lossf))
 			train_r2 = train_r2_sum/len(model_list)
@@ -506,23 +542,23 @@ def main():
 		if args.model =="ie" and args.save_data == "save" and rnum == 0 and args.null_impcount != 1:
 			shalist = np.zeros([test._size, X1.shape[1]], dtype = float)
 			for i in range(X1.shape[1]):
-				num =test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+				num =test_x
 				num[:, i] = 0
 				shalist[:, i] = model(num).array.reshape(-1, )
 			shalist = np.insert(shalist, X1.shape[1], model.lt.b.array[0], axis=1)
 			# 変数を除いた時の値+ バイアスの値＋出力の値で構成された行列をエクセルとして保存
-			np.savetxt('./result/shapy/{}_model_shapy_{}_add{}.csv'.format(args.day, args.sampling, args.add), np.hstack((shalist, model(test._dataset[test._order[test._start:test._start+test._size].tolist()][0]).array)), delimiter = ',')
+			np.savetxt('./result/shapy/{}_model_shapy_{}_add{}.csv'.format(args.day, args.sampling, args.add), np.hstack((shalist, model(test_x).array)), delimiter = ',')
 		else:
 			pass
 
 		if args.permuimp == "on":
 			permutation_Importance = []
-			target_num = test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+			target_num = test_x
 			real_loss = np.sqrt(mean_squared_error(test._dataset[test._order[test._start:test._start+test._size].tolist()][1], model(target_num).array))
 			for permu in range(X1.shape[1]):
 				permu_mean = []
 				for i in range(10):
-					num = test._dataset[test._order[test._start:test._start+test._size].tolist()][0]
+					num = test_x
 					np.random.shuffle(num[:, permu])
 					permu_mean.append(real_loss - np.sqrt(mean_squared_error(test._dataset[test._order[test._start:test._start+test._size].tolist()][1], model(num).array)))
 				permutation_Importance.append(sum(permu_mean)/len(permu_mean))
@@ -546,6 +582,13 @@ def main():
 	print("平均赤池情報量規準:{}".format(test_ak))
 	
 	#calc.show_units(model)
+	apdel_search.pop(0)
+	for i in range(valuesize-1, 0, -1): apdel_search.insert(0,[i])
+	daisu_str = []
+	for i in apdel_search: daisu_str.append(str(i))
+	
+	np.savetxt("./result/train/spa_w/{}_{}.csv".format(args.day, args.data_model), np.array(daisu_str),fmt='%s',delimiter='')
+
 
 	if args.null_impcount == 1:
 		pass
@@ -557,6 +600,7 @@ def main():
 		null_importance = np.array(null_importance)[:, np.argsort(np.array(null_importance)[1])[::-1]].tolist()
 		for i in range(10):	
 			calc.display_null_importance(null_importance, i, args)
+	
 	
 
 

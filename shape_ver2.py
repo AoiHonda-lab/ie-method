@@ -52,3 +52,34 @@ def get_shape(w, term_num, args):
         
 
     return shap_sum_i
+
+def get_shape_2(w, hh):
+    # w:空集合を含めた包除積分の重み（メビウス変換の値）
+    # term_num:データの項数、変数の数
+    # args:args.addとargs.matrixtypeの二つのint値を使って条件分岐
+    mob_fuzy = w
+    all_syugou = []
+    for i in hh:
+        all_syugou.append(tuple(i))
+
+    d_mob = dict(zip(all_syugou, mob_fuzy)) #辞書化して各々対応した要素に重みを入れている
+    l = list(d_mob) #list化した空集合を含む集合
+    shap_sum_i = []
+    for i in range(1, len(l)):
+        # key_a = l[j]
+        shap = []
+        if i == 1:
+            search = 1
+        elif len(l[i])-len(l[i-1]) == 1:
+            search = i
+        else:
+            pass
+        for j in range(search, len(l)):
+            T = l[i]
+            if  set(T) <= set(l[j]):
+                w = 1/(len(l[j])-len(T)+1) * d_mob[l[j]] #(13)の式
+                shap.append(w)
+        shap_sum_i.append(sum(shap))
+        
+
+    return shap_sum_i
